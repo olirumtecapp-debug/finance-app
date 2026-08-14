@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="description" content="FinSmart - Seu aplicativo de controle financeiro pessoal, cofrinhos, gráficos e estatísticas.">
+  <title>FinSmart - Controle Financeiro Inteligente</title>
+  
+  <!-- PWA Manifest & Mobile Meta -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FinSmart">
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2953/2953363.png">
+  
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- App Styles -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- App Container (Mobile viewport frame for desktop / Fullscreen on smartphone) -->
+  <div id="app-container" class="app-container">
+    
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="header-top">
+        <div class="user-greeting">
+          <span class="greeting-subtitle">Meu Controle Financeiro</span>
+          <h1 class="greeting-title">FinSmart 💎</h1>
+        </div>
+        <div class="header-actions">
+          <button id="toggle-visibility-btn" class="icon-btn" title="Ocultar/Mostrar Valores" aria-label="Alternar visibilidade do saldo">
+            <i class="fa-solid fa-eye" id="eye-icon"></i>
+          </button>
+          <button id="open-settings-btn" class="icon-btn" title="Configurações e Backup" aria-label="Abrir configurações">
+            <i class="fa-solid fa-gear"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Month/Year Navigation Carousel -->
+      <div class="month-selector">
+        <button id="prev-month-btn" class="month-nav-btn" aria-label="Mês anterior">
+          <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        <span id="current-month-display" class="current-month-label">Carregando...</span>
+        <button id="next-month-btn" class="month-nav-btn" aria-label="Próximo mês">
+          <i class="fa-solid fa-chevron-right"></i>
+        </button>
+      </div>
+
+      <!-- Main Balance Summary Card -->
+      <div class="balance-card">
+        <div class="balance-meta">
+          <span class="balance-label">Saldo Atual em Caixa</span>
+          <span class="badge badge-health" id="savings-rate-badge">Economia: 0%</span>
+        </div>
+        <div class="balance-amount-row">
+          <span class="currency-symbol">R$</span>
+          <span id="total-balance-value" class="balance-amount sensitive-value">0,00</span>
+        </div>
+        
+        <div class="balance-stats-grid">
+          <div class="stat-pill stat-income">
+            <div class="stat-icon-wrapper">
+              <i class="fa-solid fa-arrow-down"></i>
+            </div>
+            <div class="stat-info">
+              <span class="stat-title">Receitas</span>
+              <span id="month-income-value" class="stat-value sensitive-value">+R$ 0,00</span>
+            </div>
+          </div>
+          
+          <div class="stat-pill stat-expense">
+            <div class="stat-icon-wrapper">
+              <i class="fa-solid fa-arrow-up"></i>
+            </div>
+            <div class="stat-info">
+              <span class="stat-title">Despesas</span>
+              <span id="month-expense-value" class="stat-value sensitive-value">-R$ 0,00</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Dynamic Content Views -->
+    <main class="app-main-content">
+      
+      <!-- TAB 1: INÍCIO (DASHBOARD) -->
+      <section id="tab-home" class="tab-view active">
+        
+        <!-- Quick Action Shortcuts -->
+        <div class="quick-actions-bar">
+          <button class="quick-action-card" id="quick-add-income-btn">
+            <div class="quick-icon income-bg"><i class="fa-solid fa-plus"></i></div>
+            <span>Nova Entrada</span>
+          </button>
+          <button class="quick-action-card" id="quick-add-expense-btn">
+            <div class="quick-icon expense-bg"><i class="fa-solid fa-minus"></i></div>
+            <span>Nova Saída</span>
+          </button>
+          <button class="quick-action-card" id="quick-add-goal-btn">
+            <div class="quick-icon goal-bg"><i class="fa-solid fa-piggy-bank"></i></div>
+            <span>Novo Cofrinho</span>
+          </button>
+        </div>
+
+        <!-- Mini Cofrinho Overview -->
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title-group">
+              <span class="section-icon">🐷</span>
+              <h2 class="section-title">Cofrinhos & Metas</h2>
+            </div>
+            <button class="link-btn" id="see-all-goals-btn">Ver todos</button>
+          </div>
+          <div class="goals-total-bar">
+            <span>Total Guardado:</span>
+            <strong id="home-goals-total" class="sensitive-value">R$ 0,00</strong>
+          </div>
+          <div id="home-goals-preview-list" class="goals-preview-list">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- Recent Transactions Preview -->
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title-group">
+              <span class="section-icon">⚡</span>
+              <h2 class="section-title">Últimos Lançamentos</h2>
+            </div>
+            <button class="link-btn" id="see-all-transactions-btn">Ver extrato</button>
+          </div>
+          <div id="home-recent-transactions-list" class="transactions-list">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: EXTRATO (TRANSAÇÕES COMPLETAS) -->
+      <section id="tab-transactions" class="tab-view">
+        <div class="filter-header">
+          <div class="search-box">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="transactions-search-input" placeholder="Buscar por descrição..." aria-label="Buscar transações">
+          </div>
+          <div class="filter-chips">
+            <button class="chip active" data-filter="all">Todos</button>
+            <button class="chip" data-filter="income">Entradas</button>
+            <button class="chip" data-filter="expense">Saídas</button>
+          </div>
+        </div>
+
+        <!-- Category Dropdown Filter -->
+        <div class="secondary-filter-row">
+          <select id="transactions-category-filter" class="form-select" aria-label="Filtrar por categoria">
+            <option value="all">Todas as Categorias</option>
+            <!-- Injected by JS -->
+          </select>
+          <span id="filtered-count-label" class="filtered-count">0 lançamentos</span>
+        </div>
+
+        <!-- Full Transactions List -->
+        <div id="full-transactions-list" class="transactions-list full-list">
+          <!-- Rendered by JS -->
+        </div>
+      </section>
+
+      <!-- TAB 3: COFRINHOS (METAS DE ECONOMIA) -->
+      <section id="tab-goals" class="tab-view">
+        <div class="goals-hero-card">
+          <div class="goals-hero-info">
+            <span class="goals-hero-subtitle">Poupança e Sonhos</span>
+            <h2 class="goals-hero-title">Patrimônio Guardado</h2>
+            <div class="goals-hero-value-box">
+              <span class="currency-symbol">R$</span>
+              <span id="total-saved-in-goals" class="goals-hero-value sensitive-value">0,00</span>
+            </div>
+          </div>
+          <button class="btn btn-primary" id="open-new-goal-modal-btn">
+            <i class="fa-solid fa-plus"></i> Nova Meta
+          </button>
+        </div>
+
+        <!-- Goals Cards Grid / List -->
+        <div id="full-goals-container" class="goals-container">
+          <!-- Rendered by JS -->
+        </div>
+      </section>
+
+      <!-- TAB 4: ESTATÍSTICAS E GRÁFICOS -->
+      <section id="tab-stats" class="tab-view">
+        <!-- Insights Highlights -->
+        <div class="insights-grid">
+          <div class="insight-card">
+            <span class="insight-label">Média de Gasto Diário</span>
+            <strong id="stat-daily-avg" class="insight-value sensitive-value">R$ 0,00</strong>
+            <span class="insight-sub" id="stat-days-counted">neste mês</span>
+          </div>
+          <div class="insight-card">
+            <span class="insight-label">Maior Gasto do Mês</span>
+            <strong id="stat-top-expense-category" class="insight-value highlight-red">-</strong>
+            <span class="insight-sub" id="stat-top-expense-val" class="sensitive-value">R$ 0,00</span>
+          </div>
+          <div class="insight-card">
+            <span class="insight-label">Balanço Líquido</span>
+            <strong id="stat-net-savings" class="insight-value sensitive-value">R$ 0,00</strong>
+            <span class="insight-sub" id="stat-savings-percentage">0% da receita</span>
+          </div>
+          <div class="insight-card">
+            <span class="insight-label">Comparativo Mês Anterior</span>
+            <strong id="stat-vs-last-month" class="insight-value">0%</strong>
+            <span class="insight-sub" id="stat-vs-last-month-sub">em despesas</span>
+          </div>
+        </div>
+
+        <!-- Chart 1: Donut Category Breakdown -->
+        <div class="section-card chart-card">
+          <div class="section-header">
+            <div class="section-title-group">
+              <span class="section-icon">🥧</span>
+              <h2 class="section-title">Despesas por Categoria</h2>
+            </div>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="category-pie-chart"></canvas>
+          </div>
+          <div id="category-legend-list" class="category-legend-list">
+            <!-- Injected by JS -->
+          </div>
+        </div>
+
+        <!-- Chart 2: 6 Months History Bar Chart -->
+        <div class="section-card chart-card">
+          <div class="section-header">
+            <div class="section-title-group">
+              <span class="section-icon">📊</span>
+              <h2 class="section-title">Histórico (Últimos 6 Meses)</h2>
+            </div>
+          </div>
+          <div class="chart-wrapper bar-chart-wrapper">
+            <canvas id="history-bar-chart"></canvas>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Floating Action Button (+) -->
+    <button id="fab-add-btn" class="fab-btn" aria-label="Adicionar lançamento" title="Novo Lançamento">
+      <i class="fa-solid fa-plus"></i>
+    </button>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav">
+      <button class="nav-item active" data-tab="tab-home" aria-label="Início">
+        <i class="fa-solid fa-house"></i>
+        <span>Início</span>
+      </button>
+      <button class="nav-item" data-tab="tab-transactions" aria-label="Extrato">
+        <i class="fa-solid fa-receipt"></i>
+        <span>Extrato</span>
+      </button>
+      <div class="nav-fab-placeholder"></div>
+      <button class="nav-item" data-tab="tab-goals" aria-label="Cofrinhos">
+        <i class="fa-solid fa-piggy-bank"></i>
+        <span>Cofrinhos</span>
+      </button>
+      <button class="nav-item" data-tab="tab-stats" aria-label="Estatísticas">
+        <i class="fa-solid fa-chart-pie"></i>
+        <span>Estatísticas</span>
+      </button>
+    </nav>
+
+    <!-- ==================== MODAIS ==================== -->
+
+    <!-- Modal 1: Adicionar / Editar Transação -->
+    <div id="modal-transaction" class="modal-backdrop hidden">
+      <div class="modal-sheet">
+        <div class="modal-drag-handle"></div>
+        <div class="modal-header">
+          <h3 id="modal-tx-title" class="modal-title">Novo Lançamento</h3>
+          <button class="close-modal-btn" data-close="modal-transaction" aria-label="Fechar">&times;</button>
+        </div>
+        
+        <form id="transaction-form" class="modal-form">
+          <input type="hidden" id="tx-id">
+          
+          <!-- Transaction Type Switcher -->
+          <div class="tx-type-toggle">
+            <button type="button" class="type-btn active expense" data-type="expense">
+              <i class="fa-solid fa-arrow-up"></i> Saída
+            </button>
+            <button type="button" class="type-btn income" data-type="income">
+              <i class="fa-solid fa-arrow-down"></i> Entrada
+            </button>
+          </div>
+
+          <!-- Value Input -->
+          <div class="form-group">
+            <label for="tx-amount" class="form-label">Valor (R$)</label>
+            <div class="amount-input-wrapper">
+              <span class="prefix">R$</span>
+              <input type="number" id="tx-amount" step="0.01" min="0.01" placeholder="0,00" required>
+            </div>
+          </div>
+
+          <!-- Description -->
+          <div class="form-group">
+            <label for="tx-description" class="form-label">Descrição</label>
+            <input type="text" id="tx-description" class="form-input" placeholder="Ex: Supermercado, Salário, Uber..." required maxlength="60">
+          </div>
+
+          <!-- Category Selection Grid -->
+          <div class="form-group">
+            <label class="form-label">Categoria</label>
+            <div id="category-selector-grid" class="category-selector-grid">
+              <!-- Dynamically populated by JS based on type -->
+            </div>
+            <input type="hidden" id="tx-category" required>
+          </div>
+
+          <!-- Date & Payment Method Row -->
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="tx-date" class="form-label">Data</label>
+              <input type="date" id="tx-date" class="form-input" required>
+            </div>
+            <div class="form-group flex-1">
+              <label for="tx-payment-method" class="form-label">Pagamento</label>
+              <select id="tx-payment-method" class="form-select">
+                <option value="PIX">⚡ PIX</option>
+                <option value="Cartão de Crédito">💳 Cartão de Crédito</option>
+                <option value="Cartão de Débito">💳 Cartão de Débito</option>
+                <option value="Dinheiro">💵 Dinheiro</option>
+                <option value="Boleto">📄 Boleto</option>
+                <option value="Transferência">🏦 Transferência</option>
+                <option value="Outro">✨ Outro</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-close="modal-transaction">Cancelar</button>
+            <button type="submit" class="btn btn-primary" id="save-tx-btn">Salvar Lançamento</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal 2: Novo / Editar Cofrinho -->
+    <div id="modal-goal" class="modal-backdrop hidden">
+      <div class="modal-sheet">
+        <div class="modal-drag-handle"></div>
+        <div class="modal-header">
+          <h3 id="modal-goal-title" class="modal-title">Novo Cofrinho</h3>
+          <button class="close-modal-btn" data-close="modal-goal" aria-label="Fechar">&times;</button>
+        </div>
+        
+        <form id="goal-form" class="modal-form">
+          <input type="hidden" id="goal-id">
+          
+          <div class="form-group">
+            <label for="goal-name" class="form-label">Nome da Meta / Sonho</label>
+            <input type="text" id="goal-name" class="form-input" placeholder="Ex: Viagem de Fim de Ano, Reserva..." required maxlength="40">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="goal-target" class="form-label">Meta Total (R$)</label>
+              <div class="amount-input-wrapper small">
+                <span class="prefix">R$</span>
+                <input type="number" id="goal-target" step="0.01" min="1" placeholder="0,00" required>
+              </div>
+            </div>
+            <div class="form-group flex-1">
+              <label for="goal-initial" class="form-label">Já tenho guardado</label>
+              <div class="amount-input-wrapper small">
+                <span class="prefix">R$</span>
+                <input type="number" id="goal-initial" step="0.01" min="0" value="0.00" placeholder="0,00">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="goal-deadline" class="form-label">Data Limite (Opcional)</label>
+              <input type="date" id="goal-deadline" class="form-input">
+            </div>
+            <div class="form-group flex-1">
+              <label class="form-label">Ícone</label>
+              <div class="icon-picker-row" id="goal-icon-picker">
+                <button type="button" class="icon-choice active" data-icon="✈️">✈️</button>
+                <button type="button" class="icon-choice" data-icon="🚗">🚗</button>
+                <button type="button" class="icon-choice" data-icon="🏠">🏠</button>
+                <button type="button" class="icon-choice" data-icon="📱">📱</button>
+                <button type="button" class="icon-choice" data-icon="🛡️">🛡️</button>
+                <button type="button" class="icon-choice" data-icon="🎓">🎓</button>
+                <button type="button" class="icon-choice" data-icon="🎁">🎁</button>
+              </div>
+              <input type="hidden" id="goal-selected-icon" value="✈️">
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-close="modal-goal">Cancelar</button>
+            <button type="submit" class="btn btn-primary" id="save-goal-btn">Criar Cofrinho</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal 3: Movimentar Cofrinho (Depositar / Resgatar) -->
+    <div id="modal-goal-action" class="modal-backdrop hidden">
+      <div class="modal-sheet">
+        <div class="modal-drag-handle"></div>
+        <div class="modal-header">
+          <h3 id="modal-goal-action-title" class="modal-title">Movimentar Cofrinho</h3>
+          <button class="close-modal-btn" data-close="modal-goal-action" aria-label="Fechar">&times;</button>
+        </div>
+        
+        <form id="goal-action-form" class="modal-form">
+          <input type="hidden" id="action-goal-id">
+          
+          <div class="goal-action-summary-card">
+            <span id="action-goal-name" class="action-goal-name">Nome da Meta</span>
+            <div class="action-goal-balance-info">
+              <span>Saldo Atual no Cofrinho:</span>
+              <strong id="action-goal-current-val" class="sensitive-value">R$ 0,00</strong>
+            </div>
+          </div>
+
+          <div class="tx-type-toggle">
+            <button type="button" class="type-btn active income" id="action-deposit-tab" data-action="deposit">
+              <i class="fa-solid fa-arrow-down"></i> Guardar (+)
+            </button>
+            <button type="button" class="type-btn expense" id="action-withdraw-tab" data-action="withdraw">
+              <i class="fa-solid fa-arrow-up"></i> Resgatar (-)
+            </button>
+          </div>
+
+          <div class="form-group">
+            <label for="goal-action-amount" class="form-label">Valor da Movimentação (R$)</label>
+            <div class="amount-input-wrapper">
+              <span class="prefix">R$</span>
+              <input type="number" id="goal-action-amount" step="0.01" min="0.01" placeholder="0,00" required>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-close="modal-goal-action">Cancelar</button>
+            <button type="submit" class="btn btn-primary" id="confirm-goal-action-btn">Confirmar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal 4: Configurações, Backup e Exportação -->
+    <div id="modal-settings" class="modal-backdrop hidden">
+      <div class="modal-sheet">
+        <div class="modal-drag-handle"></div>
+        <div class="modal-header">
+          <h3 class="modal-title">Configurações & Dados</h3>
+          <button class="close-modal-btn" data-close="modal-settings" aria-label="Fechar">&times;</button>
+        </div>
+        
+        <div class="settings-body">
+          <div class="settings-section">
+            <h4 class="settings-heading"><i class="fa-solid fa-file-export"></i> Exportar & Backup</h4>
+            <p class="settings-desc">Seus dados ficam 100% salvos no seu dispositivo. Faça backup ou exporte para planilhas.</p>
+            <div class="settings-btn-grid">
+              <button id="export-csv-btn" class="btn btn-outline">
+                <i class="fa-solid fa-file-csv"></i> Exportar Extrato (CSV)
+              </button>
+              <button id="export-json-btn" class="btn btn-outline">
+                <i class="fa-solid fa-download"></i> Baixar Backup Completo (JSON)
+              </button>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <h4 class="settings-heading"><i class="fa-solid fa-file-import"></i> Restaurar Dados</h4>
+            <p class="settings-desc">Restaurar arquivo JSON salvo anteriormente.</p>
+            <label class="btn btn-secondary file-upload-label" for="import-json-file">
+              <i class="fa-solid fa-upload"></i> Selecionar Arquivo de Backup
+            </label>
+            <input type="file" id="import-json-file" accept=".json" class="hidden-file-input">
+          </div>
+
+          <div class="settings-section danger-zone">
+            <h4 class="settings-heading text-danger"><i class="fa-solid fa-triangle-exclamation"></i> Zona de Risco</h4>
+            <div class="settings-btn-grid">
+              <button id="load-sample-data-btn" class="btn btn-outline">
+                <i class="fa-solid fa-rotate-right"></i> Recarregar Dados de Exemplo
+              </button>
+              <button id="clear-all-data-btn" class="btn btn-danger">
+                <i class="fa-solid fa-trash"></i> Apagar Todos os Dados
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification Popup -->
+    <div id="toast" class="toast hidden">
+      <i class="toast-icon fa-solid fa-circle-check"></i>
+      <span id="toast-message" class="toast-text">Ação concluída com sucesso!</span>
+    </div>
+
+  </div>
+
+  <!-- Application Logic Scripts -->
+  <script src="charts.js"></script>
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .catch(err => console.log('SW registration error:', err));
+      });
+    }
+  </script>
+</body>
+</html>
