@@ -93,6 +93,8 @@ const ChartsManager = {
     });
     legendContainer.innerHTML = legendHtml;
 
+    const isLight = document.body.classList.contains('light-theme');
+    
     // Chart.js Configuration
     const chartConfig = {
       type: 'doughnut',
@@ -102,7 +104,7 @@ const ChartsManager = {
           data: dataValues,
           backgroundColor: backgroundColors,
           borderWidth: 2,
-          borderColor: '#131b2e',
+          borderColor: isLight ? '#ffffff' : '#131b2e',
           hoverOffset: 6
         }]
       },

@@ -52,7 +52,93 @@
   /* Transitions */
   --transition-fast: 0.15s ease;
   --transition-normal: 0.25s ease;
-  --transition-smooth: 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+/* Light Theme Variables */
+body.light-theme {
+  --bg-main: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f1f5f9;
+  --bg-card-glass: rgba(255, 255, 255, 0.92);
+  --bg-subtle: #f1f5f9;
+  --border-color: rgba(0, 0, 0, 0.08);
+  --border-focus: #2563eb;
+
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+
+  --primary: #2563eb;
+  --primary-light: #3b82f6;
+  --primary-dark: #1d4ed8;
+  --primary-glow: rgba(37, 99, 235, 0.18);
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.12);
+}
+
+body.light-theme {
+  background-color: #cbd5e1;
+}
+
+body.light-theme .app-header {
+  background: linear-gradient(180deg, #e2e8f0 0%, #f8fafc 100%);
+  border-bottom-color: rgba(0, 0, 0, 0.06);
+}
+
+body.light-theme .greeting-title {
+  color: #0f172a;
+}
+
+body.light-theme .month-selector {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+body.light-theme .balance-card {
+  background: linear-gradient(135deg, #1e3a8a 0%, #172554 100%);
+}
+
+body.light-theme .balance-card .balance-amount {
+  color: #ffffff;
+}
+
+body.light-theme .balance-amount {
+  color: #0f172a;
+}
+
+body.light-theme .search-box input {
+  color: #0f172a;
+}
+
+body.light-theme .amount-input-wrapper input {
+  color: #0f172a;
+}
+
+body.light-theme .form-input {
+  color: #0f172a;
+  background: #f8fafc;
+}
+
+body.light-theme .form-select {
+  color: #0f172a;
+  background: #f8fafc;
+}
+
+body.light-theme .goals-hero-card {
+  background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
+}
+
+body.light-theme .modal-sheet {
+  background: #ffffff;
+}
+
+body.light-theme .modal-title {
+  color: #0f172a;
+}
+
+body.light-theme .toast {
+  background: #0f172a;
+  color: #ffffff;
 }
 
 /* Reset & Box Sizing */

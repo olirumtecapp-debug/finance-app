@@ -29,7 +29,8 @@ const CATEGORIES = {
 const STORAGE_KEYS = {
   TRANSACTIONS: 'finsmart_transactions_v1',
   GOALS: 'finsmart_goals_v1',
-  HIDE_VALUES: 'finsmart_hide_values'
+  HIDE_VALUES: 'finsmart_hide_values',
+  THEME: 'finsmart_theme'
 };
 
 // Month Names in Portuguese
@@ -46,6 +47,7 @@ const AppState = {
   transactions: [],
   goals: [],
   hideValues: false,
+  theme: 'dark',
   activeTab: 'tab-home',
   
   // Transactions Filter
@@ -65,6 +67,14 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initAppState() {
+  // Load Theme preference
+  const savedTheme = localStorage.getItem(STORAGE_KEYS.THEME);
+  if (savedTheme === 'light') {
+    AppState.theme = 'light';
+    document.body.classList.add('light-theme');
+    updateThemeIcon();
+  }
+
   // Load Hide Values preference
   const savedHide = localStorage.getItem(STORAGE_KEYS.HIDE_VALUES);
   if (savedHide === 'true') {
@@ -198,6 +208,9 @@ function bindEvents() {
   document.getElementById('quick-add-goal-btn')?.addEventListener('click', () => openGoalModal());
   document.getElementById('fab-add-btn')?.addEventListener('click', () => openTransactionModal('expense'));
   document.getElementById('open-new-goal-modal-btn')?.addEventListener('click', () => openGoalModal());
+
+  // Theme Toggle (Light / Dark)
+  document.getElementById('toggle-theme-btn')?.addEventListener('click', toggleTheme);
 
   // Eye Icon Visibility Toggle
   document.getElementById('toggle-visibility-btn')?.addEventListener('click', toggleValuesVisibility);
@@ -358,6 +371,32 @@ function updateMonthDisplay() {
   const display = document.getElementById('current-month-display');
   if (display) {
     display.textContent = `${MONTH_NAMES[AppState.selectedMonth]} de ${AppState.selectedYear}`;
+  }
+}
+
+function toggleTheme() {
+  AppState.theme = AppState.theme === 'light' ? 'dark' : 'light';
+  if (AppState.theme === 'light') {
+    document.body.classList.add('light-theme');
+  } else {
+    document.body.classList.remove('light-theme');
+  }
+  localStorage.setItem(STORAGE_KEYS.THEME, AppState.theme);
+  updateThemeIcon();
+
+  // Re-render charts to adapt colors if currently on stats tab
+  if (AppState.activeTab === 'tab-stats') {
+    ChartsManager.renderCategoryChart(AppState.transactions, AppState.selectedYear, AppState.selectedMonth);
+    ChartsManager.renderHistoryBarChart(AppState.transactions, AppState.selectedYear, AppState.selectedMonth);
+  }
+  showToast(AppState.theme === 'light' ? 'Modo Claro ativado ☀️' : 'Modo Escuro ativado 🌙');
+}
+
+function updateThemeIcon() {
+  const icon = document.getElementById('theme-icon');
+  if (icon) {
+    icon.className = AppState.theme === 'light' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+    icon.style.color = AppState.theme === 'light' ? '#f59e0b' : '';
   }
 }
 
