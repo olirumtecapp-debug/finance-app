@@ -330,7 +330,12 @@
 
           <!-- Category Selection Grid -->
           <div class="form-group">
-            <label class="form-label">Categoria</label>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <label class="form-label" style="margin-bottom: 0;">Categoria</label>
+              <button type="button" class="link-btn" id="open-new-cat-from-tx-btn" style="font-size: 11px; padding: 0;">
+                <i class="fa-solid fa-plus"></i> Nova Categoria
+              </button>
+            </div>
             <div id="category-selector-grid" class="category-selector-grid">
               <!-- Dynamically populated by JS based on type -->
             </div>
@@ -469,10 +474,21 @@
             <button type="submit" class="btn btn-primary" id="confirm-goal-action-btn">Confirmar</button>
           </div>
         </form>
+
+        <!-- Goal Deposit/Withdrawal History & Deletion of mistaken entries -->
+        <div class="goal-history-section">
+          <div class="goal-history-header">
+            <h4 class="goal-history-title"><i class="fa-solid fa-clock-rotate-left"></i> Histórico de Movimentações</h4>
+            <span class="goal-history-hint">Clique no 🗑️ para estornar/excluir um lançamento indevido</span>
+          </div>
+          <div id="goal-history-list" class="goal-history-list">
+            <!-- Dynamically populated by JS -->
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Modal 4: Configurações, Backup e Exportação -->
+    <!-- Modal 4: Configurações, Tema, Categorias e Backup -->
     <div id="modal-settings" class="modal-backdrop hidden">
       <div class="modal-sheet">
         <div class="modal-drag-handle"></div>
@@ -482,6 +498,37 @@
         </div>
         
         <div class="settings-body">
+          <!-- Theme Settings -->
+          <div class="settings-section">
+            <h4 class="settings-heading"><i class="fa-solid fa-circle-half-stroke"></i> Tema do Aplicativo</h4>
+            <p class="settings-desc">Escolha entre o visual escuro moderno ou o tema claro de alta legibilidade.</p>
+            <div class="theme-options-grid">
+              <button type="button" id="set-theme-dark-btn" class="theme-option-card">
+                <i class="fa-solid fa-moon"></i>
+                <span>Modo Escuro</span>
+              </button>
+              <button type="button" id="set-theme-light-btn" class="theme-option-card">
+                <i class="fa-solid fa-sun"></i>
+                <span>Modo Claro</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Custom Categories Settings -->
+          <div class="settings-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <h4 class="settings-heading" style="margin-bottom: 0;"><i class="fa-solid fa-tags"></i> Minhas Categorias</h4>
+              <button class="btn-sm btn-primary" id="open-new-cat-from-settings-btn" style="padding: 4px 10px; font-size: 11px;">
+                <i class="fa-solid fa-plus"></i> Nova
+              </button>
+            </div>
+            <p class="settings-desc">Gerencie suas categorias personalizadas de receitas e despesas.</p>
+            <div id="custom-categories-list" class="custom-categories-list">
+              <!-- Rendered by JS -->
+            </div>
+          </div>
+
+          <!-- Backup & Export -->
           <div class="settings-section">
             <h4 class="settings-heading"><i class="fa-solid fa-file-export"></i> Exportar & Backup</h4>
             <p class="settings-desc">Seus dados ficam 100% salvos no seu dispositivo. Faça backup ou exporte para planilhas.</p>
@@ -495,6 +542,7 @@
             </div>
           </div>
 
+          <!-- Restore Backup -->
           <div class="settings-section">
             <h4 class="settings-heading"><i class="fa-solid fa-file-import"></i> Restaurar Dados</h4>
             <p class="settings-desc">Restaurar arquivo JSON salvo anteriormente.</p>
@@ -504,6 +552,7 @@
             <input type="file" id="import-json-file" accept=".json" class="hidden-file-input">
           </div>
 
+          <!-- Danger Zone -->
           <div class="settings-section danger-zone">
             <h4 class="settings-heading text-danger"><i class="fa-solid fa-triangle-exclamation"></i> Zona de Risco</h4>
             <div class="settings-btn-grid">
@@ -516,6 +565,67 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Modal 5: Adicionar Nova Categoria Personalizada -->
+    <div id="modal-category" class="modal-backdrop hidden">
+      <div class="modal-sheet">
+        <div class="modal-drag-handle"></div>
+        <div class="modal-header">
+          <h3 class="modal-title">Nova Categoria</h3>
+          <button class="close-modal-btn" data-close="modal-category" aria-label="Fechar">&times;</button>
+        </div>
+        
+        <form id="category-form" class="modal-form">
+          <div class="tx-type-toggle">
+            <button type="button" class="type-btn active expense" id="cat-type-expense-btn" data-type="expense">
+              <i class="fa-solid fa-arrow-up"></i> Despesa
+            </button>
+            <button type="button" class="type-btn income" id="cat-type-income-btn" data-type="income">
+              <i class="fa-solid fa-arrow-down"></i> Entrada
+            </button>
+          </div>
+
+          <div class="form-group">
+            <label for="new-cat-name" class="form-label">Nome da Categoria</label>
+            <input type="text" id="new-cat-name" class="form-input" placeholder="Ex: Pet, Academia, Assinaturas..." required maxlength="25">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Escolha um Ícone</label>
+            <div class="category-emoji-picker-grid" id="cat-emoji-picker">
+              <button type="button" class="emoji-choice active" data-emoji="🐶">🐶</button>
+              <button type="button" class="emoji-choice" data-emoji="🐱">🐱</button>
+              <button type="button" class="emoji-choice" data-emoji="🏋️">🏋️</button>
+              <button type="button" class="emoji-choice" data-emoji="🎮">🎮</button>
+              <button type="button" class="emoji-choice" data-emoji="📺">📺</button>
+              <button type="button" class="emoji-choice" data-emoji="🍿">🍿</button>
+              <button type="button" class="emoji-choice" data-emoji="💅">💅</button>
+              <button type="button" class="emoji-choice" data-emoji="✂️">✂️</button>
+              <button type="button" class="emoji-choice" data-emoji="🍕">🍕</button>
+              <button type="button" class="emoji-choice" data-emoji="☕">☕</button>
+              <button type="button" class="emoji-choice" data-emoji="🛒">🛒</button>
+              <button type="button" class="emoji-choice" data-emoji="🎁">🎁</button>
+              <button type="button" class="emoji-choice" data-emoji="💼">💼</button>
+              <button type="button" class="emoji-choice" data-emoji="💻">💻</button>
+              <button type="button" class="emoji-choice" data-emoji="📱">📱</button>
+              <button type="button" class="emoji-choice" data-emoji="🚗">🚗</button>
+              <button type="button" class="emoji-choice" data-emoji="✈️">✈️</button>
+              <button type="button" class="emoji-choice" data-emoji="📚">📚</button>
+              <button type="button" class="emoji-choice" data-emoji="💡">💡</button>
+              <button type="button" class="emoji-choice" data-emoji="🩺">🩺</button>
+              <button type="button" class="emoji-choice" data-emoji="💎">💎</button>
+              <button type="button" class="emoji-choice" data-emoji="⭐">⭐</button>
+            </div>
+            <input type="hidden" id="selected-cat-emoji" value="🐶">
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-close="modal-category">Cancelar</button>
+            <button type="submit" class="btn btn-primary" id="save-cat-btn">Criar Categoria</button>
+          </div>
+        </form>
       </div>
     </div>
 

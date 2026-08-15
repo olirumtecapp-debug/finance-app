@@ -25,7 +25,15 @@ const ChartsManager = {
   },
 
   getCategoryColor(categoryName) {
-    return this.categoryColors[categoryName] || '#94a3b8';
+    if (this.categoryColors[categoryName]) {
+      return this.categoryColors[categoryName];
+    }
+    const dynamicPalette = ['#06b6d4', '#8b5cf6', '#ec4899', '#f97316', '#10b981', '#3b82f6', '#eab308', '#14b8a6', '#f43f5e', '#a855f7', '#84cc16', '#6366f1'];
+    let hash = 0;
+    for (let i = 0; i < categoryName.length; i++) {
+      hash = categoryName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return dynamicPalette[Math.abs(hash) % dynamicPalette.length];
   },
 
   // 1. Render or Update Category Donut Chart

@@ -2,8 +2,8 @@
    FinSmart - Main Application Logic & State Engine
    ========================================================= */
 
-// Predefined Categories with Emojis
-const CATEGORIES = {
+// Default Categories
+const DEFAULT_CATEGORIES = {
   expense: [
     { name: 'Alimentação', icon: '🍔' },
     { name: 'Moradia', icon: '🏠' },
@@ -30,7 +30,8 @@ const STORAGE_KEYS = {
   TRANSACTIONS: 'finsmart_transactions_v1',
   GOALS: 'finsmart_goals_v1',
   HIDE_VALUES: 'finsmart_hide_values',
-  THEME: 'finsmart_theme'
+  THEME: 'finsmart_theme',
+  CUSTOM_CATEGORIES: 'finsmart_custom_categories_v1'
 };
 
 // Month Names in Portuguese
@@ -46,6 +47,7 @@ const AppState = {
   selectedMonth: new Date().getMonth(),
   transactions: [],
   goals: [],
+  customCategories: { expense: [], income: [] },
   hideValues: false,
   theme: 'dark',
   activeTab: 'tab-home',
@@ -55,6 +57,13 @@ const AppState = {
   txCategoryFilter: 'all',
   txSearchQuery: ''
 };
+
+// Helper to get all categories (Default + Custom)
+function getAllCategories(type = 'expense') {
+  const base = DEFAULT_CATEGORIES[type] || [];
+  const custom = (AppState.customCategories && AppState.customCategories[type]) || [];
+  return [...base, ...custom];
+}
 
 /* =========================================================
    1. Initialization & Sample Data Generation
@@ -68,12 +77,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function initAppState() {
   // Load Theme preference
-  const savedTheme = localStorage.getItem(STORAGE_KEYS.THEME);
-  if (savedTheme === 'light') {
-    AppState.theme = 'light';
-    document.body.classList.add('light-theme');
-    updateThemeIcon();
-  }
+  const savedTheme = localStorage.getItem(STORAGE_KEYS.THEME) || 'dark';
+  applyTheme(savedTheme, false);
 
   // Load Hide Values preference
   const savedHide = localStorage.getItem(STORAGE_KEYS.HIDE_VALUES);
@@ -81,6 +86,16 @@ function initAppState() {
     AppState.hideValues = true;
     document.body.classList.add('hide-values');
     updateEyeIcon();
+  }
+
+  // Load Custom Categories
+  const savedCats = localStorage.getItem(STORAGE_KEYS.CUSTOM_CATEGORIES);
+  if (savedCats) {
+    try {
+      AppState.customCategories = JSON.parse(savedCats);
+    } catch (e) {
+      AppState.customCategories = { expense: [], income: [] };
+    }
   }
 
   // Load Transactions
@@ -98,6 +113,10 @@ function initAppState() {
   if (savedGoals) {
     try {
       AppState.goals = JSON.parse(savedGoals);
+      // Ensure history array exists for each goal
+      AppState.goals.forEach(g => {
+        if (!Array.isArray(g.history)) g.history = [];
+      });
     } catch (e) {
       AppState.goals = [];
     }
@@ -125,7 +144,11 @@ function generateSampleData() {
       target: 10000,
       current: 4500,
       deadline: `${currentYear}-12-31`,
-      icon: '🛡️'
+      icon: '🛡️',
+      history: [
+        { id: 'gh-1', type: 'deposit', amount: 3000, date: `${currentYear}-07-10`, description: 'Aporte Inicial' },
+        { id: 'gh-2', type: 'deposit', amount: 1500, date: `${currentYear}-08-05`, description: 'Economia do Salário' }
+      ]
     },
     {
       id: 'g-2',
@@ -133,7 +156,11 @@ function generateSampleData() {
       target: 3500,
       current: 2100,
       deadline: `${currentYear}-11-15`,
-      icon: '✈️'
+      icon: '✈️',
+      history: [
+        { id: 'gh-3', type: 'deposit', amount: 1500, date: `${currentYear}-06-20`, description: 'Início da Meta' },
+        { id: 'gh-4', type: 'deposit', amount: 600, date: `${currentYear}-08-01`, description: 'Depósito Mensal' }
+      ]
     },
     {
       id: 'g-3',
@@ -141,11 +168,13 @@ function generateSampleData() {
       target: 2800,
       current: 1950,
       deadline: `${currentYear}-09-30`,
-      icon: '📱'
+      icon: '📱',
+      history: [
+        { id: 'gh-5', type: 'deposit', amount: 1950, date: `${currentYear}-07-15`, description: 'Reserva para Celular' }
+      ]
     }
   ];
 
-  // Helper to format ISO date
   const makeDate = (year, month, day) => {
     const m = String(month + 1).padStart(2, '0');
     const d = String(day).padStart(2, '0');
@@ -167,12 +196,7 @@ function generateSampleData() {
     { id: 'tx-101', type: 'income', amount: 4800, description: 'Salário Mensal', category: 'Salário', date: makeDate(currentYear, currentMonth - 1, 5), paymentMethod: 'Transferência' },
     { id: 'tx-102', type: 'expense', amount: 1350, description: 'Aluguel & Condomínio', category: 'Moradia', date: makeDate(currentYear, currentMonth - 1, 6), paymentMethod: 'PIX' },
     { id: 'tx-103', type: 'expense', amount: 780, description: 'Supermercado Mensal', category: 'Alimentação', date: makeDate(currentYear, currentMonth - 1, 9), paymentMethod: 'Cartão de Crédito' },
-    { id: 'tx-104', type: 'expense', amount: 240, description: 'Cinema & Passeios', category: 'Lazer', date: makeDate(currentYear, currentMonth - 1, 15), paymentMethod: 'PIX' },
-
-    // 2 Months ago
-    { id: 'tx-201', type: 'income', amount: 4800, description: 'Salário Mensal', category: 'Salário', date: makeDate(currentYear, currentMonth - 2, 5), paymentMethod: 'Transferência' },
-    { id: 'tx-202', type: 'income', amount: 600, description: 'Venda de Item Usado', category: 'Vendas', date: makeDate(currentYear, currentMonth - 2, 14), paymentMethod: 'PIX' },
-    { id: 'tx-203', type: 'expense', amount: 2400, description: 'Gastos Variados', category: 'Moradia', date: makeDate(currentYear, currentMonth - 2, 10), paymentMethod: 'Cartão de Crédito' }
+    { id: 'tx-104', type: 'expense', amount: 240, description: 'Cinema & Passeios', category: 'Lazer', date: makeDate(currentYear, currentMonth - 1, 15), paymentMethod: 'PIX' }
   ];
 
   AppState.goals = sampleGoals;
@@ -183,6 +207,7 @@ function generateSampleData() {
 function saveData() {
   localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(AppState.transactions));
   localStorage.setItem(STORAGE_KEYS.GOALS, JSON.stringify(AppState.goals));
+  localStorage.setItem(STORAGE_KEYS.CUSTOM_CATEGORIES, JSON.stringify(AppState.customCategories));
 }
 
 /* =========================================================
@@ -209,8 +234,12 @@ function bindEvents() {
   document.getElementById('fab-add-btn')?.addEventListener('click', () => openTransactionModal('expense'));
   document.getElementById('open-new-goal-modal-btn')?.addEventListener('click', () => openGoalModal());
 
-  // Theme Toggle (Light / Dark)
-  document.getElementById('toggle-theme-btn')?.addEventListener('click', toggleTheme);
+  // Theme Toggles
+  document.getElementById('toggle-theme-btn')?.addEventListener('click', () => {
+    applyTheme(AppState.theme === 'light' ? 'dark' : 'light', true);
+  });
+  document.getElementById('set-theme-dark-btn')?.addEventListener('click', () => applyTheme('dark', true));
+  document.getElementById('set-theme-light-btn')?.addEventListener('click', () => applyTheme('light', true));
 
   // Eye Icon Visibility Toggle
   document.getElementById('toggle-visibility-btn')?.addEventListener('click', toggleValuesVisibility);
@@ -270,13 +299,42 @@ function bindEvents() {
   });
 
   // Goal Icon Picker
-  document.querySelectorAll('.icon-choice').forEach(btn => {
+  document.querySelectorAll('#goal-icon-picker .icon-choice').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.icon-choice').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('#goal-icon-picker .icon-choice').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       document.getElementById('goal-selected-icon').value = btn.getAttribute('data-icon');
     });
   });
+
+  // Category Modal Openers & Picker
+  document.getElementById('open-new-cat-from-tx-btn')?.addEventListener('click', () => {
+    const activeTypeBtn = document.querySelector('.tx-type-toggle .type-btn.active');
+    const type = activeTypeBtn ? activeTypeBtn.getAttribute('data-type') : 'expense';
+    openCategoryModal(type);
+  });
+  document.getElementById('open-new-cat-from-settings-btn')?.addEventListener('click', () => {
+    openCategoryModal('expense');
+  });
+
+  document.querySelectorAll('#cat-emoji-picker .emoji-choice').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#cat-emoji-picker .emoji-choice').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('selected-cat-emoji').value = btn.getAttribute('data-emoji');
+    });
+  });
+
+  document.getElementById('cat-type-expense-btn')?.addEventListener('click', function() {
+    this.classList.add('active');
+    document.getElementById('cat-type-income-btn').classList.remove('active');
+  });
+  document.getElementById('cat-type-income-btn')?.addEventListener('click', function() {
+    this.classList.add('active');
+    document.getElementById('cat-type-expense-btn').classList.remove('active');
+  });
+
+  document.getElementById('category-form')?.addEventListener('submit', handleSaveCategory);
 
   // Extrato Filters
   document.getElementById('transactions-search-input')?.addEventListener('input', (e) => {
@@ -299,10 +357,15 @@ function bindEvents() {
   });
 
   // Settings Modal & Backup Handlers
-  document.getElementById('open-settings-btn')?.addEventListener('click', () => openModal('modal-settings'));
+  document.getElementById('open-settings-btn')?.addEventListener('click', () => {
+    renderCustomCategoriesList();
+    renderSettingsThemeButtons();
+    openModal('modal-settings');
+  });
   document.getElementById('export-csv-btn')?.addEventListener('click', exportToCSV);
   document.getElementById('export-json-btn')?.addEventListener('click', exportBackupJSON);
   document.getElementById('import-json-file')?.addEventListener('change', importBackupJSON);
+  
   document.getElementById('load-sample-data-btn')?.addEventListener('click', () => {
     if (confirm('Deseja recarregar os dados de exemplo? Seus lançamentos atuais serão substituídos.')) {
       generateSampleData();
@@ -311,6 +374,7 @@ function bindEvents() {
       showToast('Dados de exemplo recarregados com sucesso!');
     }
   });
+
   document.getElementById('clear-all-data-btn')?.addEventListener('click', () => {
     if (confirm('Atenção: Tem certeza que deseja apagar TODOS os seus lançamentos e cofrinhos? Esta ação não pode ser desfeita.')) {
       AppState.transactions = [];
@@ -324,8 +388,70 @@ function bindEvents() {
 }
 
 /* =========================================================
-   3. Tab & Month Navigation
+   3. Theme & UI Helpers
    ========================================================= */
+
+function applyTheme(themeName, showNotification = false) {
+  AppState.theme = themeName;
+  if (themeName === 'light') {
+    document.body.classList.add('light-theme');
+  } else {
+    document.body.classList.remove('light-theme');
+  }
+  localStorage.setItem(STORAGE_KEYS.THEME, themeName);
+  
+  updateThemeIcon();
+  renderSettingsThemeButtons();
+
+  if (AppState.activeTab === 'tab-stats') {
+    ChartsManager.renderCategoryChart(AppState.transactions, AppState.selectedYear, AppState.selectedMonth);
+    ChartsManager.renderHistoryBarChart(AppState.transactions, AppState.selectedYear, AppState.selectedMonth);
+  }
+
+  if (showNotification) {
+    showToast(themeName === 'light' ? 'Modo Claro ativado ☀️' : 'Modo Escuro ativado 🌙');
+  }
+}
+
+function updateThemeIcon() {
+  const icon = document.getElementById('theme-icon');
+  if (icon) {
+    icon.className = AppState.theme === 'light' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+    icon.style.color = AppState.theme === 'light' ? '#f59e0b' : '';
+  }
+}
+
+function renderSettingsThemeButtons() {
+  const darkBtn = document.getElementById('set-theme-dark-btn');
+  const lightBtn = document.getElementById('set-theme-light-btn');
+  if (darkBtn && lightBtn) {
+    if (AppState.theme === 'light') {
+      lightBtn.classList.add('active');
+      darkBtn.classList.remove('active');
+    } else {
+      darkBtn.classList.add('active');
+      lightBtn.classList.remove('active');
+    }
+  }
+}
+
+function toggleValuesVisibility() {
+  AppState.hideValues = !AppState.hideValues;
+  if (AppState.hideValues) {
+    document.body.classList.add('hide-values');
+  } else {
+    document.body.classList.remove('hide-values');
+  }
+  localStorage.setItem(STORAGE_KEYS.HIDE_VALUES, AppState.hideValues);
+  updateEyeIcon();
+}
+
+function updateEyeIcon() {
+  const icon = document.getElementById('eye-icon');
+  if (icon) {
+    icon.className = AppState.hideValues ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+  }
+}
 
 function switchTab(tabId) {
   AppState.activeTab = tabId;
@@ -342,7 +468,6 @@ function switchTab(tabId) {
     }
   });
 
-  // Re-render charts when switching to stats tab
   if (tabId === 'tab-stats') {
     ChartsManager.renderCategoryChart(AppState.transactions, AppState.selectedYear, AppState.selectedMonth);
     ChartsManager.renderHistoryBarChart(AppState.transactions, AppState.selectedYear, AppState.selectedMonth);
@@ -374,54 +499,6 @@ function updateMonthDisplay() {
   }
 }
 
-function toggleTheme() {
-  AppState.theme = AppState.theme === 'light' ? 'dark' : 'light';
-  if (AppState.theme === 'light') {
-    document.body.classList.add('light-theme');
-  } else {
-    document.body.classList.remove('light-theme');
-  }
-  localStorage.setItem(STORAGE_KEYS.THEME, AppState.theme);
-  updateThemeIcon();
-
-  // Re-render charts to adapt colors if currently on stats tab
-  if (AppState.activeTab === 'tab-stats') {
-    ChartsManager.renderCategoryChart(AppState.transactions, AppState.selectedYear, AppState.selectedMonth);
-    ChartsManager.renderHistoryBarChart(AppState.transactions, AppState.selectedYear, AppState.selectedMonth);
-  }
-  showToast(AppState.theme === 'light' ? 'Modo Claro ativado ☀️' : 'Modo Escuro ativado 🌙');
-}
-
-function updateThemeIcon() {
-  const icon = document.getElementById('theme-icon');
-  if (icon) {
-    icon.className = AppState.theme === 'light' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
-    icon.style.color = AppState.theme === 'light' ? '#f59e0b' : '';
-  }
-}
-
-function toggleValuesVisibility() {
-  AppState.hideValues = !AppState.hideValues;
-  if (AppState.hideValues) {
-    document.body.classList.add('hide-values');
-  } else {
-    document.body.classList.remove('hide-values');
-  }
-  localStorage.setItem(STORAGE_KEYS.HIDE_VALUES, AppState.hideValues);
-  updateEyeIcon();
-}
-
-function updateEyeIcon() {
-  const icon = document.getElementById('eye-icon');
-  if (icon) {
-    if (AppState.hideValues) {
-      icon.className = 'fa-solid fa-eye-slash';
-    } else {
-      icon.className = 'fa-solid fa-eye';
-    }
-  }
-}
-
 /* =========================================================
    4. Render Engine
    ========================================================= */
@@ -435,7 +512,6 @@ function renderAll() {
   renderStatsTab();
 }
 
-// Format numbers to BRL string
 function formatCurrency(val) {
   return Number(val || 0).toLocaleString('pt-BR', {
     minimumFractionDigits: 2,
@@ -443,7 +519,6 @@ function formatCurrency(val) {
   });
 }
 
-// Format date to Brazilian format
 function formatDateBR(dateStr) {
   if (!dateStr) return '';
   const parts = dateStr.split('-');
@@ -453,16 +528,13 @@ function formatDateBR(dateStr) {
   return dateStr;
 }
 
-// 4.1 Header Balance & Month Totals
 function renderHeaderBalances() {
-  // Total balance of ALL time
   let totalBalance = 0;
   AppState.transactions.forEach(t => {
     if (t.type === 'income') totalBalance += Number(t.amount);
     if (t.type === 'expense') totalBalance -= Number(t.amount);
   });
 
-  // Current Month Totals
   let monthIncome = 0;
   let monthExpense = 0;
 
@@ -474,7 +546,6 @@ function renderHeaderBalances() {
     }
   });
 
-  // Update DOM
   const balEl = document.getElementById('total-balance-value');
   const incEl = document.getElementById('month-income-value');
   const expEl = document.getElementById('month-expense-value');
@@ -484,7 +555,6 @@ function renderHeaderBalances() {
   if (incEl) incEl.textContent = `+R$ ${formatCurrency(monthIncome)}`;
   if (expEl) expEl.textContent = `-R$ ${formatCurrency(monthExpense)}`;
 
-  // Savings rate badge calculation
   if (badgeEl) {
     if (monthIncome > 0) {
       const savedRate = Math.max(0, Math.round(((monthIncome - monthExpense) / monthIncome) * 100));
@@ -497,9 +567,7 @@ function renderHeaderBalances() {
   }
 }
 
-// 4.2 Home Tab Render
 function renderHomeTab() {
-  // Goals preview (top 2 goals)
   const homeGoalsContainer = document.getElementById('home-goals-preview-list');
   const homeGoalsTotal = document.getElementById('home-goals-total');
   
@@ -538,7 +606,6 @@ function renderHomeTab() {
     }
   }
 
-  // Recent Transactions (last 5 in current selected month)
   const homeTxContainer = document.getElementById('home-recent-transactions-list');
   if (homeTxContainer) {
     const monthTx = AppState.transactions.filter(t => {
@@ -559,41 +626,38 @@ function renderHomeTab() {
   }
 }
 
-// 4.3 Transactions Tab Render
 function renderTransactionsTab() {
   const container = document.getElementById('full-transactions-list');
   const countLabel = document.getElementById('filtered-count-label');
   const catSelect = document.getElementById('transactions-category-filter');
 
-  // Populate Categories Filter Dropdown if needed
-  if (catSelect && catSelect.options.length <= 1) {
+  if (catSelect) {
+    const currentVal = catSelect.value || 'all';
+    catSelect.innerHTML = '<option value="all">Todas as Categorias</option>';
     const allCategories = new Set();
-    [...CATEGORIES.expense, ...CATEGORIES.income].forEach(c => allCategories.add(c.name));
+    [...getAllCategories('expense'), ...getAllCategories('income')].forEach(c => allCategories.add(c.name));
     allCategories.forEach(cat => {
       const opt = document.createElement('option');
       opt.value = cat;
       opt.textContent = cat;
       catSelect.appendChild(opt);
     });
+    catSelect.value = currentVal;
   }
 
-  // Filter current month transactions
   let filtered = AppState.transactions.filter(t => {
     const d = new Date(t.date + 'T00:00:00');
     return d.getFullYear() === AppState.selectedYear && d.getMonth() === AppState.selectedMonth;
   });
 
-  // Type filter
   if (AppState.txTypeFilter !== 'all') {
     filtered = filtered.filter(t => t.type === AppState.txTypeFilter);
   }
 
-  // Category filter
   if (AppState.txCategoryFilter !== 'all') {
     filtered = filtered.filter(t => t.category === AppState.txCategoryFilter);
   }
 
-  // Search filter
   if (AppState.txSearchQuery) {
     filtered = filtered.filter(t => 
       t.description.toLowerCase().includes(AppState.txSearchQuery) ||
@@ -601,7 +665,6 @@ function renderTransactionsTab() {
     );
   }
 
-  // Sort descending by date
   filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
 
   if (countLabel) {
@@ -623,8 +686,8 @@ function renderTransactionsTab() {
 }
 
 function getCategoryIcon(categoryName, type) {
-  const catList = type === 'income' ? CATEGORIES.income : CATEGORIES.expense;
-  const match = catList.find(c => c.name === categoryName);
+  const all = getAllCategories(type);
+  const match = all.find(c => c.name === categoryName);
   return match ? match.icon : '🏷️';
 }
 
@@ -659,7 +722,6 @@ function renderTransactionItemHtml(tx) {
   `;
 }
 
-// 4.4 Goals Tab Render
 function renderGoalsTab() {
   const container = document.getElementById('full-goals-container');
   const heroValue = document.getElementById('total-saved-in-goals');
@@ -685,7 +747,7 @@ function renderGoalsTab() {
         return `
           <div class="full-goal-card" id="goal-card-${g.id}">
             <div class="goal-card-top">
-              <div class="goal-info-title">
+              <div class="goal-info-title" style="cursor: pointer;" onclick="openGoalActionModal('${g.id}', 'deposit')">
                 <div class="goal-avatar">${g.icon || '🐷'}</div>
                 <div class="goal-names">
                   <h3>${escapeHtml(g.name)}</h3>
@@ -732,7 +794,6 @@ function renderGoalsTab() {
   }
 }
 
-// 4.5 Statistics & Insights Render
 function renderStatsTab() {
   const currentMonthTx = AppState.transactions.filter(t => {
     const d = new Date(t.date + 'T00:00:00');
@@ -753,13 +814,11 @@ function renderStatsTab() {
     }
   });
 
-  // 1. Daily Average
   const daysInMonth = new Date(AppState.selectedYear, AppState.selectedMonth + 1, 0).getDate();
   const dailyAvg = totalExpense / daysInMonth;
   const dailyEl = document.getElementById('stat-daily-avg');
   if (dailyEl) dailyEl.textContent = `R$ ${formatCurrency(dailyAvg)}`;
 
-  // 2. Top Expense Category
   let topCat = '-';
   let topCatVal = 0;
   for (const cat in categoryExpenses) {
@@ -773,7 +832,6 @@ function renderStatsTab() {
   if (topCatEl) topCatEl.textContent = topCat;
   if (topCatValEl) topCatValEl.textContent = topCatVal > 0 ? `R$ ${formatCurrency(topCatVal)}` : 'R$ 0,00';
 
-  // 3. Net Savings Balance
   const netSavings = totalIncome - totalExpense;
   const netEl = document.getElementById('stat-net-savings');
   const netPctEl = document.getElementById('stat-savings-percentage');
@@ -790,7 +848,6 @@ function renderStatsTab() {
     }
   }
 
-  // 4. Compare with Previous Month
   let prevMonth = AppState.selectedMonth - 1;
   let prevYear = AppState.selectedYear;
   if (prevMonth < 0) {
@@ -833,7 +890,6 @@ function renderStatsTab() {
     }
   }
 
-  // Render Charts
   ChartsManager.renderCategoryChart(AppState.transactions, AppState.selectedYear, AppState.selectedMonth);
   ChartsManager.renderHistoryBarChart(AppState.transactions, AppState.selectedYear, AppState.selectedMonth);
 }
@@ -860,7 +916,6 @@ function openTransactionModal(type = 'expense') {
   document.getElementById('tx-id').value = '';
   document.getElementById('modal-tx-title').textContent = 'Novo Lançamento';
 
-  // Toggle button state
   const typeBtns = document.querySelectorAll('.tx-type-toggle .type-btn');
   typeBtns.forEach(btn => {
     if (btn.getAttribute('data-type') === type) {
@@ -870,10 +925,8 @@ function openTransactionModal(type = 'expense') {
     }
   });
 
-  // Populate categories
   populateCategorySelector(type);
 
-  // Set default date to today or current month view
   const today = new Date();
   let defaultDateStr = today.toISOString().split('T')[0];
   document.getElementById('tx-date').value = defaultDateStr;
@@ -886,7 +939,7 @@ function populateCategorySelector(type) {
   const hiddenInput = document.getElementById('tx-category');
   if (!grid || !hiddenInput) return;
 
-  const list = type === 'income' ? CATEGORIES.income : CATEGORIES.expense;
+  const list = getAllCategories(type);
   grid.innerHTML = '';
 
   list.forEach((cat, idx) => {
@@ -902,8 +955,9 @@ function populateCategorySelector(type) {
     grid.appendChild(btn);
   });
 
-  // Default select first
-  hiddenInput.value = list[0].name;
+  if (list.length > 0) {
+    hiddenInput.value = list[0].name;
+  }
 }
 
 function handleSaveTransaction(e) {
@@ -924,13 +978,11 @@ function handleSaveTransaction(e) {
   }
 
   if (txId) {
-    // Edit
     const index = AppState.transactions.findIndex(t => t.id === txId);
     if (index !== -1) {
       AppState.transactions[index] = { id: txId, type, amount, description, category, date, paymentMethod };
     }
   } else {
-    // New
     const newTx = {
       id: 'tx-' + Date.now(),
       type,
@@ -988,13 +1040,25 @@ function handleSaveGoal(e) {
     return;
   }
 
+  const initialHistory = [];
+  if (current > 0) {
+    initialHistory.push({
+      id: 'gh-' + Date.now(),
+      type: 'deposit',
+      amount: current,
+      date: new Date().toISOString().split('T')[0],
+      description: 'Saldo Inicial'
+    });
+  }
+
   const newGoal = {
     id: 'g-' + Date.now(),
     name,
     target,
     current: Math.max(0, current),
     deadline,
-    icon
+    icon,
+    history: initialHistory
   };
 
   AppState.goals.push(newGoal);
@@ -1013,10 +1077,12 @@ window.deleteGoal = function(goalId) {
   }
 };
 
-// 5.3 Goal Action (Deposit / Withdraw) Modal
+// 5.3 Goal Action (Deposit / Withdraw) Modal & Movements History
 window.openGoalActionModal = function(goalId, defaultAction = 'deposit') {
   const goal = AppState.goals.find(g => g.id === goalId);
   if (!goal) return;
+
+  if (!Array.isArray(goal.history)) goal.history = [];
 
   document.getElementById('action-goal-id').value = goal.id;
   document.getElementById('action-goal-name').textContent = `${goal.icon || '🐷'} ${goal.name}`;
@@ -1034,7 +1100,82 @@ window.openGoalActionModal = function(goalId, defaultAction = 'deposit') {
     depositTab.classList.remove('active');
   }
 
+  renderGoalHistoryList(goal.id);
   openModal('modal-goal-action');
+};
+
+function renderGoalHistoryList(goalId) {
+  const goal = AppState.goals.find(g => g.id === goalId);
+  const container = document.getElementById('goal-history-list');
+  if (!container || !goal) return;
+
+  const history = goal.history || [];
+  if (history.length === 0) {
+    container.innerHTML = `
+      <div class="empty-placeholder" style="padding: 12px;">
+        <i class="fa-solid fa-clock-rotate-left" style="font-size: 20px;"></i>
+        <span style="font-size: 11px;">Nenhuma movimentação registrada neste cofrinho.</span>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = history.map(item => {
+    const isDeposit = item.type === 'deposit';
+    const iconClass = isDeposit ? 'deposit fa-arrow-down' : 'withdraw fa-arrow-up';
+    const typeLabel = isDeposit ? 'Guardado (+)' : 'Resgatado (-)';
+    const amountClass = isDeposit ? 'deposit' : 'withdraw';
+    const sign = isDeposit ? '+' : '-';
+
+    return `
+      <div class="goal-history-item" id="gh-item-${item.id}">
+        <div class="goal-hist-left">
+          <div class="goal-hist-icon ${item.type}">
+            <i class="fa-solid ${iconClass}"></i>
+          </div>
+          <div class="goal-hist-info">
+            <span class="goal-hist-label">${typeLabel}</span>
+            <span class="goal-hist-date">${formatDateBR(item.date)}</span>
+          </div>
+        </div>
+        <div class="goal-hist-right">
+          <span class="goal-hist-amount ${amountClass} sensitive-value">${sign}R$ ${formatCurrency(item.amount)}</span>
+          <button type="button" class="goal-hist-del-btn" title="Estornar/Excluir lançamento" onclick="deleteGoalHistoryEntry('${goal.id}', '${item.id}')">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+window.deleteGoalHistoryEntry = function(goalId, historyId) {
+  const goal = AppState.goals.find(g => g.id === goalId);
+  if (!goal || !Array.isArray(goal.history)) return;
+
+  const entryIndex = goal.history.findIndex(h => h.id === historyId);
+  if (entryIndex === -1) return;
+
+  const entry = goal.history[entryIndex];
+  const typeText = entry.type === 'deposit' ? 'depósito (+)' : 'resgate (-)';
+
+  if (confirm(`Deseja estornar/excluir este ${typeText} de R$ ${formatCurrency(entry.amount)}? O saldo do cofrinho será recalculado.`)) {
+    // Revert the amount
+    if (entry.type === 'deposit') {
+      goal.current = Math.max(0, goal.current - Number(entry.amount));
+    } else {
+      goal.current = Number(goal.current) + Number(entry.amount);
+    }
+
+    // Remove entry from history
+    goal.history.splice(entryIndex, 1);
+
+    saveData();
+    document.getElementById('action-goal-current-val').textContent = `R$ ${formatCurrency(goal.current)}`;
+    renderGoalHistoryList(goal.id);
+    renderAll();
+    showToast('Lançamento estornado do cofrinho!');
+  }
 };
 
 function handleConfirmGoalAction(e) {
@@ -1051,8 +1192,19 @@ function handleConfirmGoalAction(e) {
   const goal = AppState.goals.find(g => g.id === goalId);
   if (!goal) return;
 
+  if (!Array.isArray(goal.history)) goal.history = [];
+
+  const todayStr = new Date().toISOString().split('T')[0];
+
   if (isDeposit) {
     goal.current = (goal.current || 0) + amount;
+    goal.history.unshift({
+      id: 'gh-' + Date.now(),
+      type: 'deposit',
+      amount: amount,
+      date: todayStr,
+      description: 'Depósito no Cofrinho'
+    });
     showToast(`R$ ${formatCurrency(amount)} guardados no cofrinho! 🐷`);
   } else {
     if (amount > goal.current) {
@@ -1060,13 +1212,130 @@ function handleConfirmGoalAction(e) {
       return;
     }
     goal.current -= amount;
+    goal.history.unshift({
+      id: 'gh-' + Date.now(),
+      type: 'withdraw',
+      amount: amount,
+      date: todayStr,
+      description: 'Resgate do Cofrinho'
+    });
     showToast(`R$ ${formatCurrency(amount)} resgatados com sucesso.`);
   }
 
   saveData();
-  closeModal('modal-goal-action');
+  document.getElementById('goal-action-amount').value = '';
+  document.getElementById('action-goal-current-val').textContent = `R$ ${formatCurrency(goal.current)}`;
+  renderGoalHistoryList(goal.id);
   renderAll();
 }
+
+// 5.4 Custom Categories Modal & Management
+function openCategoryModal(type = 'expense') {
+  const form = document.getElementById('category-form');
+  if (form) form.reset();
+
+  document.getElementById('new-cat-name').value = '';
+  document.getElementById('selected-cat-emoji').value = '🐶';
+
+  const expBtn = document.getElementById('cat-type-expense-btn');
+  const incBtn = document.getElementById('cat-type-income-btn');
+
+  if (type === 'income') {
+    incBtn?.classList.add('active');
+    expBtn?.classList.remove('active');
+  } else {
+    expBtn?.classList.add('active');
+    incBtn?.classList.remove('active');
+  }
+
+  document.querySelectorAll('#cat-emoji-picker .emoji-choice').forEach((b, i) => {
+    if (i === 0) b.classList.add('active');
+    else b.classList.remove('active');
+  });
+
+  openModal('modal-category');
+}
+
+function handleSaveCategory(e) {
+  e.preventDefault();
+  const name = document.getElementById('new-cat-name').value.trim();
+  const emoji = document.getElementById('selected-cat-emoji').value || '🏷️';
+  const isIncome = document.getElementById('cat-type-income-btn').classList.contains('active');
+  const type = isIncome ? 'income' : 'expense';
+
+  if (!name) {
+    alert('Informe o nome da categoria.');
+    return;
+  }
+
+  // Check if exists
+  const existing = getAllCategories(type).find(c => c.name.toLowerCase() === name.toLowerCase());
+  if (existing) {
+    alert('Já existe uma categoria com este nome!');
+    return;
+  }
+
+  if (!AppState.customCategories) AppState.customCategories = { expense: [], income: [] };
+  if (!AppState.customCategories[type]) AppState.customCategories[type] = [];
+
+  AppState.customCategories[type].push({ name, icon: emoji, isCustom: true });
+  saveData();
+
+  closeModal('modal-category');
+  populateCategorySelector(type);
+  renderCustomCategoriesList();
+  renderTransactionsTab();
+  showToast(`Categoria "${name}" criada com sucesso! 🏷️`);
+}
+
+function renderCustomCategoriesList() {
+  const container = document.getElementById('custom-categories-list');
+  if (!container) return;
+
+  const expenses = (AppState.customCategories && AppState.customCategories.expense) || [];
+  const incomes = (AppState.customCategories && AppState.customCategories.income) || [];
+  const allCustom = [
+    ...expenses.map(c => ({ ...c, type: 'expense' })),
+    ...incomes.map(c => ({ ...c, type: 'income' }))
+  ];
+
+  if (allCustom.length === 0) {
+    container.innerHTML = `
+      <div class="empty-placeholder" style="padding: 10px;">
+        <span style="font-size: 11px;">Nenhuma categoria personalizada criada ainda.</span>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = allCustom.map(c => `
+    <div class="custom-cat-row">
+      <div class="custom-cat-left">
+        <span>${c.icon}</span>
+        <strong>${escapeHtml(c.name)}</strong>
+        <span class="cat-type-badge ${c.type === 'income' ? 'badge-income' : 'badge-expense'}">
+          ${c.type === 'income' ? 'Receita' : 'Despesa'}
+        </span>
+      </div>
+      <button type="button" class="btn-del-cat" title="Excluir Categoria" onclick="deleteCustomCategory('${c.name}', '${c.type}')">
+        <i class="fa-solid fa-trash-can"></i>
+      </button>
+    </div>
+  `).join('');
+}
+
+window.deleteCustomCategory = function(name, type) {
+  if (confirm(`Deseja excluir a categoria personalizada "${name}"?`)) {
+    if (AppState.customCategories && AppState.customCategories[type]) {
+      AppState.customCategories[type] = AppState.customCategories[type].filter(c => c.name !== name);
+      saveData();
+      renderCustomCategoriesList();
+      populateCategorySelector(type);
+      renderTransactionsTab();
+      showToast(`Categoria "${name}" excluída.`);
+    }
+  }
+};
 
 /* =========================================================
    6. Backup, Export & Restore Engine
@@ -1078,7 +1347,7 @@ function exportToCSV() {
     return;
   }
 
-  let csvContent = '\uFEFF'; // BOM for UTF-8 Excel compatibility
+  let csvContent = '\uFEFF';
   csvContent += 'Data;Tipo;Categoria;Descricao;MetodoPagamento;Valor (R$)\n';
 
   AppState.transactions.forEach(t => {
@@ -1100,10 +1369,12 @@ function exportToCSV() {
 
 function exportBackupJSON() {
   const backupData = {
-    version: '1.0',
+    version: '1.2',
     exportDate: new Date().toISOString(),
     transactions: AppState.transactions,
-    goals: AppState.goals
+    goals: AppState.goals,
+    customCategories: AppState.customCategories,
+    theme: AppState.theme
   };
 
   const jsonStr = JSON.stringify(backupData, null, 2);
@@ -1131,6 +1402,12 @@ function importBackupJSON(e) {
       }
       if (data.goals && Array.isArray(data.goals)) {
         AppState.goals = data.goals;
+      }
+      if (data.customCategories) {
+        AppState.customCategories = data.customCategories;
+      }
+      if (data.theme) {
+        applyTheme(data.theme, false);
       }
       saveData();
       closeModal('modal-settings');
