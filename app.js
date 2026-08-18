@@ -33,8 +33,7 @@ const STORAGE_KEYS = {
   THEME: 'finsmart_theme',
   CUSTOM_CATEGORIES: 'finsmart_custom_categories_v1',
   SECURITY_ENABLED: 'finsmart_security_enabled_v1',
-  PIN_CODE: 'finsmart_pin_code_v1',
-  BIOMETRIC_ENABLED: 'finsmart_biometric_enabled_v1'
+  PIN_CODE: 'finsmart_pin_code_v1'
 };
 
 // Month Names in Portuguese
@@ -59,7 +58,6 @@ const AppState = {
   // Security & Lock State
   securityEnabled: false,
   pinCode: '',
-  biometricEnabled: true,
   isUnlocked: false,
   enteredPin: '',
   
@@ -103,8 +101,6 @@ function initAppState() {
   // 3. Load Security Settings
   AppState.securityEnabled = localStorage.getItem(STORAGE_KEYS.SECURITY_ENABLED) === 'true';
   AppState.pinCode = localStorage.getItem(STORAGE_KEYS.PIN_CODE) || '';
-  const savedBio = localStorage.getItem(STORAGE_KEYS.BIOMETRIC_ENABLED);
-  AppState.biometricEnabled = savedBio !== null ? savedBio === 'true' : true;
 
   // 4. Load Custom Categories
   const savedCats = localStorage.getItem(STORAGE_KEYS.CUSTOM_CATEGORIES);
@@ -220,11 +216,10 @@ function saveData() {
   localStorage.setItem(STORAGE_KEYS.CUSTOM_CATEGORIES, JSON.stringify(AppState.customCategories));
   localStorage.setItem(STORAGE_KEYS.SECURITY_ENABLED, AppState.securityEnabled);
   localStorage.setItem(STORAGE_KEYS.PIN_CODE, AppState.pinCode);
-  localStorage.setItem(STORAGE_KEYS.BIOMETRIC_ENABLED, AppState.biometricEnabled);
 }
 
 /* =========================================================
-   2. Security & Lock Screen Engine (PIN + Biometrics)
+   2. Security & Lock Screen Engine (PIN de 4 dígitos)
    ========================================================= */
 
 function checkSecurityOnStartup() {
@@ -235,13 +230,6 @@ function checkSecurityOnStartup() {
     AppState.enteredPin = '';
     updatePinDots();
     if (lockOverlay) lockOverlay.classList.remove('hidden');
-    
-    // Auto-prompt for Biometrics if supported
-    if (AppState.biometricEnabled && window.PublicKeyCredential) {
-      setTimeout(() => {
-        triggerBiometricAuth(true);
-      }, 350);
-    }
   } else {
     AppState.isUnlocked = true;
     AppState.securityEnabled = false;
@@ -250,39 +238,11 @@ function checkSecurityOnStartup() {
   }
 }
 
-function triggerBiometricAuth(silentFail = false) {
-  // If Web Authentication API is available
-  if (window.PublicKeyCredential && navigator.credentials) {
-    const challenge = new Uint8Array(32);
-    window.crypto.getRandomValues(challenge);
-
-    // Try mock WebAuthn authentication assertion
-    navigator.credentials.get({
-      publicKey: {
-        challenge: challenge,
-        timeout: 60000,
-        userVerification: 'preferred'
-      }
-    }).then(assertion => {
-      if (assertion) {
-        unlockAppWithSuccess();
-      }
-    }).catch(err => {
-      console.log('Biometrics not completed or fallback to PIN requested:', err);
-      if (!silentFail) {
-        // Simulated biometric confirmation for smartphone web browsers
-        if (confirm('Simular Leitor Digital / Biometria do Celular?\nClique em OK para desbloquear instantaneamente com sua digital cadastrada.')) {
-          unlockAppWithSuccess();
-        }
-      }
-    });
-  } else {
-    if (!silentFail) {
-      if (confirm('Simular Leitor Digital / Biometria do Celular?\nClique em OK para desbloquear instantaneamente com sua digital cadastrada.')) {
-        unlockAppWithSuccess();
-      }
-    }
-  }
+function handleKeypadClear() {
+  AppState.enteredPin = '';
+  updatePinDots();
+  const errorMsg = document.getElementById('lock-error-msg');
+  if (errorMsg) errorMsg.classList.add('hidden');
 }
 
 function handleKeypadPress(key) {
@@ -344,6 +304,13 @@ function unlockAppWithSuccess() {
    3. Period Filtering Engine (Diário, Semanal, Mensal, Anual)
    ========================================================= */
 
+function formatLocalDate(d) {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function getPeriodDateRange() {
   const ref = new Date(AppState.periodRefDate);
   const year = ref.getFullYear();
@@ -353,30 +320,30 @@ function getPeriodDateRange() {
   let startStr, endStr, displayLabel;
 
   if (AppState.selectedPeriod === 'daily') {
-    const dStr = ref.toISOString().split('T')[0];
-    startStr = dStr;
-    endStr = dStr;
+    const today = new Date();
+    const isToday = (ref.getFullYear() === today.getFullYear() &&
+                     ref.getMonth() === today.getMonth() &&
+                     ref.getDate() === today.getDate());
 
-    const todayStr = new Date().toISOString().split('T')[0];
-    if (dStr === todayStr) {
-      displayLabel = `Hoje, ${String(day).padStart(2, '0')} de ${MONTH_NAMES[month]}`;
+    startStr = formatLocalDate(ref);
+    endStr = formatLocalDate(ref);
+
+    if (isToday) {
+      displayLabel = `Hoje (${String(day).padStart(2, '0')}/${String(month + 1).padStart(2, '0')})`;
     } else {
       displayLabel = `${String(day).padStart(2, '0')} de ${MONTH_NAMES[month]} de ${year}`;
     }
   } 
   else if (AppState.selectedPeriod === 'weekly') {
     // Current week (Monday to Sunday)
-    const currentDay = ref.getDay(); // 0 is Sunday
+    const currentDay = ref.getDay(); // 0 is Sunday, 1 is Monday...
     const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay;
     
-    const monday = new Date(ref);
-    monday.setDate(ref.getDate() + distanceToMonday);
-    
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
+    const monday = new Date(year, month, day + distanceToMonday);
+    const sunday = new Date(year, month, day + distanceToMonday + 6);
 
-    startStr = monday.toISOString().split('T')[0];
-    endStr = sunday.toISOString().split('T')[0];
+    startStr = formatLocalDate(monday);
+    endStr = formatLocalDate(sunday);
 
     const mDay = String(monday.getDate()).padStart(2, '0');
     const mMonth = String(monday.getMonth() + 1).padStart(2, '0');
@@ -388,7 +355,7 @@ function getPeriodDateRange() {
   else if (AppState.selectedPeriod === 'annual') {
     startStr = `${year}-01-01`;
     endStr = `${year}-12-31`;
-    displayLabel = `Ano de ${year}`;
+    displayLabel = `Ano ${year}`;
   } 
   else {
     // Monthly (Default)
@@ -423,7 +390,7 @@ function changePeriod(delta) {
   renderAll();
 }
 
-function setPeriodMode(periodMode) {
+window.setPeriodMode = function(periodMode) {
   AppState.selectedPeriod = periodMode;
   document.querySelectorAll('.period-chip').forEach(chip => {
     if (chip.getAttribute('data-period') === periodMode) {
@@ -433,7 +400,7 @@ function setPeriodMode(periodMode) {
     }
   });
   renderAll();
-}
+};
 
 /* =========================================================
    4. Event Listeners & Interactions
@@ -487,8 +454,8 @@ function bindEvents() {
       handleKeypadPress(btn.getAttribute('data-key'));
     });
   });
+  document.getElementById('keypad-clear-btn')?.addEventListener('click', handleKeypadClear);
   document.getElementById('keypad-backspace-btn')?.addEventListener('click', handleKeypadBackspace);
-  document.getElementById('keypad-bio-btn')?.addEventListener('click', () => triggerBiometricAuth(false));
   document.getElementById('lock-forgot-pin-btn')?.addEventListener('click', () => {
     AppState.isUnlocked = true;
     AppState.securityEnabled = false;
@@ -513,9 +480,6 @@ function bindEvents() {
 
   document.getElementById('open-pin-setup-btn')?.addEventListener('click', () => {
     openModal('modal-pin-setup');
-  });
-  document.getElementById('test-biometrics-btn')?.addEventListener('click', () => {
-    triggerBiometricAuth(false);
   });
   document.getElementById('pin-setup-form')?.addEventListener('submit', handleSavePin);
 
@@ -773,9 +737,11 @@ function switchTab(tabId) {
   });
 
   if (tabId === 'tab-stats') {
-    const periodTx = getTransactionsForSelectedPeriod();
-    ChartsManager.renderCategoryChart(periodTx);
-    ChartsManager.renderHistoryBarChart(AppState.transactions, AppState.periodRefDate.getFullYear(), AppState.periodRefDate.getMonth());
+    setTimeout(() => {
+      const periodTx = getTransactionsForSelectedPeriod();
+      ChartsManager.renderCategoryChart(periodTx);
+      ChartsManager.renderHistoryBarChart(AppState.transactions, AppState.periodRefDate.getFullYear(), AppState.periodRefDate.getMonth());
+    }, 50);
   }
 }
 
@@ -893,12 +859,21 @@ function renderHomeTab() {
     const periodTx = getTransactionsForSelectedPeriod().sort((a, b) => new Date(b.date) - new Date(a.date));
 
     if (periodTx.length === 0) {
-      homeTxContainer.innerHTML = `
-        <div class="empty-placeholder">
-          <i class="fa-solid fa-receipt"></i>
-          <span>Nenhum lançamento no período selecionado.</span>
-        </div>
-      `;
+      const allTx = [...AppState.transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+      if (allTx.length === 0) {
+        homeTxContainer.innerHTML = `
+          <div class="empty-placeholder">
+            <i class="fa-solid fa-receipt"></i>
+            <span>Nenhum lançamento cadastrado ainda.</span>
+          </div>
+        `;
+      } else {
+        homeTxContainer.innerHTML = `
+          <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px; padding: 2px 6px;">
+            <i class="fa-solid fa-calendar-xmark"></i> Sem lançamentos em "${getPeriodDateRange().displayLabel}". Exibindo últimos registros gerais:
+          </div>
+        ` + allTx.slice(0, 5).map(t => renderTransactionItemHtml(t)).join('');
+      }
     } else {
       homeTxContainer.innerHTML = periodTx.slice(0, 5).map(t => renderTransactionItemHtml(t)).join('');
     }
@@ -950,9 +925,13 @@ function renderTransactionsTab() {
   if (container) {
     if (filtered.length === 0) {
       container.innerHTML = `
-        <div class="empty-placeholder">
-          <i class="fa-solid fa-magnifying-glass"></i>
-          <span>Nenhum lançamento encontrado no período.</span>
+        <div class="empty-placeholder" style="padding: 24px 16px; text-align: center;">
+          <i class="fa-solid fa-calendar-day" style="font-size: 28px; margin-bottom: 8px; color: var(--primary-light);"></i>
+          <strong style="color: var(--text-primary); font-size: 14px; display: block; margin-bottom: 4px;">Nenhum lançamento em "${getPeriodDateRange().displayLabel}"</strong>
+          <span style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 12px;">Use as setinhas &lt; &gt; para navegar entre as datas ou visualize o mês completo:</span>
+          <button type="button" class="btn btn-primary btn-sm" onclick="setPeriodMode('monthly')" style="margin: 0 auto; display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px;">
+            <i class="fa-solid fa-calendar"></i> Ver Mês Inteiro
+          </button>
         </div>
       `;
     } else {

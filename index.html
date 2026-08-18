@@ -58,7 +58,7 @@
             <i class="fa-solid fa-shield-halved"></i>
           </div>
           <h2 class="lock-title">FinSmart Seguro</h2>
-          <p class="lock-subtitle" id="lock-status-text">Toque na digital ou digite seu PIN</p>
+          <p class="lock-subtitle" id="lock-status-text">Digite seu PIN de 4 dígitos</p>
         </div>
 
         <!-- PIN Indicator Dots -->
@@ -81,9 +81,7 @@
           <button type="button" class="keypad-btn" data-key="7">7</button>
           <button type="button" class="keypad-btn" data-key="8">8</button>
           <button type="button" class="keypad-btn" data-key="9">9</button>
-          <button type="button" class="keypad-btn action-key" id="keypad-bio-btn" title="Desbloquear com Digital">
-            <i class="fa-solid fa-fingerprint"></i>
-          </button>
+          <button type="button" class="keypad-btn action-key" id="keypad-clear-btn" title="Limpar">C</button>
           <button type="button" class="keypad-btn" data-key="0">0</button>
           <button type="button" class="keypad-btn action-key" id="keypad-backspace-btn" title="Apagar">
             <i class="fa-solid fa-delete-left"></i>
@@ -569,23 +567,20 @@
         </div>
         
         <div class="settings-body">
-          <!-- Security & PIN / Biometrics Settings -->
+          <!-- Security & PIN Settings -->
           <div class="settings-section">
-            <h4 class="settings-heading"><i class="fa-solid fa-shield-halved"></i> Segurança & Bloqueio</h4>
-            <p class="settings-desc">Exija confirmação por Digital (Biometria) ou PIN de 4 dígitos para abrir o aplicativo.</p>
+            <h4 class="settings-heading"><i class="fa-solid fa-shield-halved"></i> Senha PIN de Segurança</h4>
+            <p class="settings-desc">Exija uma senha PIN de 4 dígitos para abrir o aplicativo.</p>
             <div class="security-toggle-row">
-              <span class="security-label">Bloquear app ao abrir</span>
+              <span class="security-label">Bloquear app com senha</span>
               <label class="switch-toggle" for="security-lock-toggle">
                 <input type="checkbox" id="security-lock-toggle">
                 <span class="slider"></span>
               </label>
             </div>
             <div class="settings-btn-grid" style="margin-top: 10px;">
-              <button type="button" id="open-pin-setup-btn" class="btn btn-outline">
+              <button type="button" id="open-pin-setup-btn" class="btn btn-outline" style="grid-column: 1 / -1;">
                 <i class="fa-solid fa-key"></i> Definir / Alterar Senha PIN
-              </button>
-              <button type="button" id="test-biometrics-btn" class="btn btn-outline">
-                <i class="fa-solid fa-fingerprint"></i> Testar Leitor Digital
               </button>
             </div>
           </div>
