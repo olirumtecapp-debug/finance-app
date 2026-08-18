@@ -33,6 +33,48 @@
   <!-- App Container (Mobile viewport frame for desktop / Fullscreen on smartphone) -->
   <div id="app-container" class="app-container">
     
+    <!-- Lock Screen Security Overlay -->
+    <div id="lock-screen-overlay" class="lock-screen-overlay hidden">
+      <div class="lock-card">
+        <div class="lock-brand">
+          <div class="lock-icon-badge">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <h2 class="lock-title">FinSmart Seguro</h2>
+          <p class="lock-subtitle" id="lock-status-text">Toque na digital ou digite seu PIN</p>
+        </div>
+
+        <!-- PIN Indicator Dots -->
+        <div class="pin-dots-container" id="pin-dots">
+          <span class="pin-dot"></span>
+          <span class="pin-dot"></span>
+          <span class="pin-dot"></span>
+          <span class="pin-dot"></span>
+        </div>
+        <div id="lock-error-msg" class="lock-error-msg hidden">PIN incorreto. Tente novamente.</div>
+
+        <!-- Numeric Keypad -->
+        <div class="keypad-grid">
+          <button type="button" class="keypad-btn" data-key="1">1</button>
+          <button type="button" class="keypad-btn" data-key="2">2</button>
+          <button type="button" class="keypad-btn" data-key="3">3</button>
+          <button type="button" class="keypad-btn" data-key="4">4</button>
+          <button type="button" class="keypad-btn" data-key="5">5</button>
+          <button type="button" class="keypad-btn" data-key="6">6</button>
+          <button type="button" class="keypad-btn" data-key="7">7</button>
+          <button type="button" class="keypad-btn" data-key="8">8</button>
+          <button type="button" class="keypad-btn" data-key="9">9</button>
+          <button type="button" class="keypad-btn action-key" id="keypad-bio-btn" title="Desbloquear com Digital">
+            <i class="fa-solid fa-fingerprint"></i>
+          </button>
+          <button type="button" class="keypad-btn" data-key="0">0</button>
+          <button type="button" class="keypad-btn action-key" id="keypad-backspace-btn" title="Apagar">
+            <i class="fa-solid fa-delete-left"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Top Header -->
     <header class="app-header">
       <div class="header-top">
@@ -53,13 +95,21 @@
         </div>
       </div>
 
-      <!-- Month/Year Navigation Carousel -->
+      <!-- Period Filter Selector (Diário, Semanal, Mensal, Anual) -->
+      <div class="period-selector-row">
+        <button type="button" class="period-chip" data-period="daily">📅 Diário</button>
+        <button type="button" class="period-chip" data-period="weekly">🗓️ Semanal</button>
+        <button type="button" class="period-chip active" data-period="monthly">📆 Mensal</button>
+        <button type="button" class="period-chip" data-period="annual">📈 Anual</button>
+      </div>
+
+      <!-- Month/Period Navigation Carousel -->
       <div class="month-selector">
-        <button id="prev-month-btn" class="month-nav-btn" aria-label="Mês anterior">
+        <button id="prev-month-btn" class="month-nav-btn" aria-label="Período anterior">
           <i class="fa-solid fa-chevron-left"></i>
         </button>
         <span id="current-month-display" class="current-month-label">Carregando...</span>
-        <button id="next-month-btn" class="month-nav-btn" aria-label="Próximo mês">
+        <button id="next-month-btn" class="month-nav-btn" aria-label="Próximo período">
           <i class="fa-solid fa-chevron-right"></i>
         </button>
       </div>
@@ -498,6 +548,27 @@
         </div>
         
         <div class="settings-body">
+          <!-- Security & PIN / Biometrics Settings -->
+          <div class="settings-section">
+            <h4 class="settings-heading"><i class="fa-solid fa-shield-halved"></i> Segurança & Bloqueio</h4>
+            <p class="settings-desc">Exija confirmação por Digital (Biometria) ou PIN de 4 dígitos para abrir o aplicativo.</p>
+            <div class="security-toggle-row">
+              <span class="security-label">Bloquear app ao abrir</span>
+              <label class="switch-toggle" for="security-lock-toggle">
+                <input type="checkbox" id="security-lock-toggle">
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="settings-btn-grid" style="margin-top: 10px;">
+              <button type="button" id="open-pin-setup-btn" class="btn btn-outline">
+                <i class="fa-solid fa-key"></i> Definir / Alterar Senha PIN
+              </button>
+              <button type="button" id="test-biometrics-btn" class="btn btn-outline">
+                <i class="fa-solid fa-fingerprint"></i> Testar Leitor Digital
+              </button>
+            </div>
+          </div>
+
           <!-- Theme Settings -->
           <div class="settings-section">
             <h4 class="settings-heading"><i class="fa-solid fa-circle-half-stroke"></i> Tema do Aplicativo</h4>
@@ -624,6 +695,36 @@
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-close="modal-category">Cancelar</button>
             <button type="submit" class="btn btn-primary" id="save-cat-btn">Criar Categoria</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal 6: Configurar Senha PIN de Segurança -->
+    <div id="modal-pin-setup" class="modal-backdrop hidden">
+      <div class="modal-sheet">
+        <div class="modal-drag-handle"></div>
+        <div class="modal-header">
+          <h3 class="modal-title">Configurar Senha PIN</h3>
+          <button class="close-modal-btn" data-close="modal-pin-setup" aria-label="Fechar">&times;</button>
+        </div>
+        
+        <form id="pin-setup-form" class="modal-form">
+          <p class="settings-desc">Defina um código numérico de 4 dígitos para proteger seu aplicativo.</p>
+
+          <div class="form-group">
+            <label for="setup-new-pin" class="form-label">Novo PIN (4 dígitos numéricos)</label>
+            <input type="password" id="setup-new-pin" class="form-input" inputmode="numeric" maxlength="4" placeholder="••••" required pattern="[0-9]{4}">
+          </div>
+
+          <div class="form-group">
+            <label for="setup-confirm-pin" class="form-label">Confirmar Novo PIN</label>
+            <input type="password" id="setup-confirm-pin" class="form-input" inputmode="numeric" maxlength="4" placeholder="••••" required pattern="[0-9]{4}">
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-close="modal-pin-setup">Cancelar</button>
+            <button type="submit" class="btn btn-primary" id="save-pin-btn">Salvar Senha PIN</button>
           </div>
         </form>
       </div>

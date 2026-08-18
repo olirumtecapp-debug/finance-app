@@ -37,16 +37,13 @@ const ChartsManager = {
   },
 
   // 1. Render or Update Category Donut Chart
-  renderCategoryChart(transactions, currentYear, currentMonth) {
+  renderCategoryChart(filteredTransactions) {
     const canvas = document.getElementById('category-pie-chart');
     const legendContainer = document.getElementById('category-legend-list');
     if (!canvas || !legendContainer) return;
 
-    // Filter expenses in current selected month
-    const expenses = transactions.filter(t => {
-      const d = new Date(t.date + 'T00:00:00');
-      return t.type === 'expense' && d.getFullYear() === currentYear && d.getMonth() === currentMonth;
-    });
+    // Filter expenses from current active period
+    const expenses = (filteredTransactions || []).filter(t => t.type === 'expense');
 
     const categoryTotals = {};
     let totalExpense = 0;
