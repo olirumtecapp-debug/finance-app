@@ -438,6 +438,30 @@ function bindEvents() {
   document.getElementById('prev-month-btn')?.addEventListener('click', () => changePeriod(-1));
   document.getElementById('next-month-btn')?.addEventListener('click', () => changePeriod(1));
 
+  // Direct Date Picker
+  const datePickerInput = document.getElementById('direct-date-picker');
+  const datePickerBtn = document.getElementById('open-date-picker-btn');
+
+  datePickerBtn?.addEventListener('click', (e) => {
+    if (e.target !== datePickerInput && datePickerInput) {
+      if (datePickerInput.showPicker) {
+        try { datePickerInput.showPicker(); } catch (err) { datePickerInput.focus(); }
+      } else {
+        datePickerInput.focus();
+      }
+    }
+  });
+
+  datePickerInput?.addEventListener('change', (e) => {
+    if (e.target.value) {
+      const parts = e.target.value.split('-');
+      if (parts.length === 3) {
+        AppState.periodRefDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        renderAll();
+      }
+    }
+  });
+
   // Theme Toggles
   document.getElementById('toggle-theme-btn')?.addEventListener('click', () => {
     applyTheme(AppState.theme === 'light' ? 'dark' : 'light', true);
@@ -738,9 +762,7 @@ function switchTab(tabId) {
 
   if (tabId === 'tab-stats') {
     setTimeout(() => {
-      const periodTx = getTransactionsForSelectedPeriod();
-      ChartsManager.renderCategoryChart(periodTx);
-      ChartsManager.renderHistoryBarChart(AppState.transactions, AppState.periodRefDate.getFullYear(), AppState.periodRefDate.getMonth());
+      renderStatsTab();
     }, 50);
   }
 }
@@ -1053,6 +1075,7 @@ function renderGoalsTab() {
 }
 
 function renderStatsTab() {
+  const { displayLabel } = getPeriodDateRange();
   const periodTx = getTransactionsForSelectedPeriod();
 
   let totalIncome = 0;
@@ -1069,12 +1092,41 @@ function renderStatsTab() {
     }
   });
 
-  const daysCount = AppState.selectedPeriod === 'daily' ? 1 : 
-                    AppState.selectedPeriod === 'weekly' ? 7 : 
-                    AppState.selectedPeriod === 'annual' ? 365 : 30;
-  const dailyAvg = totalExpense / daysCount;
+  // 1. Dynamic Header Banner
+  const typeBadge = document.getElementById('report-type-badge');
+  const periodTitle = document.getElementById('report-period-title');
+  const repIncome = document.getElementById('report-total-income');
+  const repExpense = document.getElementById('report-total-expense');
+
+  const periodTypeName = AppState.selectedPeriod === 'daily' ? 'Relatório Diário' :
+                         AppState.selectedPeriod === 'weekly' ? 'Relatório Semanal' :
+                         AppState.selectedPeriod === 'annual' ? 'Relatório Anual' : 'Relatório Mensal';
+
+  if (typeBadge) typeBadge.textContent = periodTypeName;
+  if (periodTitle) periodTitle.textContent = displayLabel;
+  if (repIncome) repIncome.textContent = `+R$ ${formatCurrency(totalIncome)}`;
+  if (repExpense) repExpense.textContent = `-R$ ${formatCurrency(totalExpense)}`;
+
+  // 2. Insight Cards
+  const card1Title = document.getElementById('stat-card1-title');
+  const daysSubEl = document.getElementById('stat-days-counted');
   const dailyEl = document.getElementById('stat-daily-avg');
-  if (dailyEl) dailyEl.textContent = `R$ ${formatCurrency(dailyAvg)}`;
+
+  if (AppState.selectedPeriod === 'daily') {
+    if (card1Title) card1Title.textContent = 'Entradas do Dia';
+    if (dailyEl) dailyEl.textContent = `+R$ ${formatCurrency(totalIncome)}`;
+    if (daysSubEl) daysSubEl.textContent = 'recebidas nesta data';
+  } else {
+    if (card1Title) card1Title.textContent = 'Média Diária';
+    const daysCount = AppState.selectedPeriod === 'weekly' ? 7 : 
+                      AppState.selectedPeriod === 'annual' ? 365 : 30;
+    const dailyAvg = totalExpense / daysCount;
+    if (dailyEl) dailyEl.textContent = `R$ ${formatCurrency(dailyAvg)}`;
+    if (daysSubEl) {
+      daysSubEl.textContent = AppState.selectedPeriod === 'weekly' ? 'nesta semana' :
+                              AppState.selectedPeriod === 'annual' ? 'no ano' : 'neste mês';
+    }
+  }
 
   let topCat = '-';
   let topCatVal = 0;
@@ -1105,16 +1157,42 @@ function renderStatsTab() {
     }
   }
 
-  // Comparison
   const vsMonthEl = document.getElementById('stat-vs-last-month');
   const vsMonthSubEl = document.getElementById('stat-vs-last-month-sub');
   if (vsMonthEl && vsMonthSubEl) {
     vsMonthEl.textContent = `${periodTx.length}`;
-    vsMonthSubEl.textContent = 'lançamentos neste período';
+    vsMonthSubEl.textContent = 'lançamentos no período';
   }
 
+  // 3. Render Donut & Adaptive Bar Chart
   ChartsManager.renderCategoryChart(periodTx);
-  ChartsManager.renderHistoryBarChart(AppState.transactions, AppState.periodRefDate.getFullYear(), AppState.periodRefDate.getMonth());
+  ChartsManager.renderAdaptiveBarChart(AppState.transactions, AppState.selectedPeriod, AppState.periodRefDate);
+
+  // 4. Render Report Transactions List
+  const reportTxContainer = document.getElementById('report-transactions-list');
+  const reportTxCount = document.getElementById('report-tx-count-badge');
+  const reportTxTitle = document.getElementById('report-tx-title');
+
+  if (reportTxTitle) {
+    reportTxTitle.textContent = `Lançamentos de ${displayLabel}`;
+  }
+  if (reportTxCount) {
+    reportTxCount.textContent = `${periodTx.length} iten${periodTx.length === 1 ? 'm' : 's'}`;
+  }
+
+  if (reportTxContainer) {
+    if (periodTx.length === 0) {
+      reportTxContainer.innerHTML = `
+        <div class="empty-placeholder" style="padding: 16px;">
+          <i class="fa-solid fa-receipt"></i>
+          <span>Nenhum lançamento registrado em "${displayLabel}".</span>
+        </div>
+      `;
+    } else {
+      const sorted = [...periodTx].sort((a, b) => new Date(b.date) - new Date(a.date));
+      reportTxContainer.innerHTML = sorted.map(t => renderTransactionItemHtml(t)).join('');
+    }
+  }
 }
 
 /* =========================================================

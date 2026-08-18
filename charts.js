@@ -1,27 +1,27 @@
 /* =========================================================
-   FinSmart - Charts & Visualization Engine (Chart.js)
+   FinSmart - Chart.js Manager & Dynamic Visualizations (v2.3)
    ========================================================= */
 
 const ChartsManager = {
   pieChartInstance: null,
   barChartInstance: null,
 
-  // Palette for Categories
+  // Color Palette per category
   categoryColors: {
-    'Alimentação': '#f97316',     // Orange
-    'Moradia': '#6366f1',         // Indigo
-    'Transporte': '#0ea5e9',     // Sky Blue
-    'Lazer': '#ec4899',           // Pink
-    'Saúde': '#14b8a6',           // Teal
-    'Educação': '#eab308',       // Yellow
-    'Contas & Boletos': '#f43f5e',// Rose
-    'Compras': '#a855f7',         // Purple
-    'Salário': '#10b981',         // Green
-    'Investimentos': '#06b6d4',   // Cyan
-    'Freelance': '#3b82f6',       // Blue
-    'Vendas': '#84cc16',          // Lime
-    'Presentes': '#f472b6',       // Light Pink
-    'Outros': '#64748b'           // Slate
+    'Alimentação': '#f97316',
+    'Moradia': '#3b82f6',
+    'Transporte': '#eab308',
+    'Contas & Boletos': '#ec4899',
+    'Lazer': '#a855f7',
+    'Saúde': '#ef4444',
+    'Educação': '#06b6d4',
+    'Compras': '#10b981',
+    'Salário': '#10b981',
+    'Freelance': '#06b6d4',
+    'Investimentos': '#8b5cf6',
+    'Vendas': '#f59e0b',
+    'Presentes': '#ec4899',
+    'Outros': '#64748b'
   },
 
   getCategoryColor(categoryName) {
@@ -65,9 +65,9 @@ const ChartsManager = {
         this.pieChartInstance = null;
       }
       legendContainer.innerHTML = `
-        <div class="empty-placeholder">
-          <i class="fa-solid fa-chart-pie"></i>
-          <span>Nenhuma despesa registrada neste mês.</span>
+        <div class="empty-placeholder" style="padding: 16px;">
+          <i class="fa-solid fa-chart-pie" style="font-size: 24px;"></i>
+          <span>Nenhuma despesa registrada neste período.</span>
         </div>
       `;
       return;
@@ -145,50 +145,124 @@ const ChartsManager = {
     this.pieChartInstance = new Chart(canvas, chartConfig);
   },
 
-  // 2. Render or Update 6-Month History Bar Chart
-  renderHistoryBarChart(transactions, currentYear, currentMonth) {
+  // 2. Render or Update Adaptive History & Comparison Bar Chart
+  renderAdaptiveBarChart(transactions, periodMode, periodRefDate) {
     const canvas = document.getElementById('history-bar-chart');
+    const titleEl = document.getElementById('history-bar-title');
     if (!canvas) return;
 
-    const monthNamesShort = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-    
-    // Generate the last 6 months list ending at currentYear/currentMonth
-    const monthSlots = [];
-    for (let i = 5; i >= 0; i--) {
-      let targetMonth = currentMonth - i;
-      let targetYear = currentYear;
-      if (targetMonth < 0) {
-        targetMonth += 12;
-        targetYear -= 1;
+    const ref = new Date(periodRefDate);
+    const year = ref.getFullYear();
+    const month = ref.getMonth();
+    const day = ref.getDate();
+
+    let labels = [];
+    let incomeData = [];
+    let expenseData = [];
+
+    const formatShortBR = (d) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const dayNum = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${dayNum}`;
+    };
+
+    if (periodMode === 'daily') {
+      if (titleEl) titleEl.textContent = 'Histórico dos Últimos 7 Dias';
+      // 7 days ending at current ref date
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(year, month, day - i);
+        const dStr = formatShortBR(d);
+        labels.push(`${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`);
+
+        let dayInc = 0;
+        let dayExp = 0;
+        transactions.forEach(t => {
+          if (t.date === dStr) {
+            if (t.type === 'income') dayInc += Number(t.amount);
+            if (t.type === 'expense') dayExp += Number(t.amount);
+          }
+        });
+        incomeData.push(dayInc);
+        expenseData.push(dayExp);
       }
-      monthSlots.push({
-        year: targetYear,
-        month: targetMonth,
-        label: `${monthNamesShort[targetMonth]}/${String(targetYear).slice(2)}`,
-        income: 0,
-        expense: 0
-      });
+    } 
+    else if (periodMode === 'weekly') {
+      if (titleEl) titleEl.textContent = 'Comparativo dos 7 Dias da Semana';
+      const dayNames = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+      const currentDay = ref.getDay();
+      const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay;
+      const monday = new Date(year, month, day + distanceToMonday);
+
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+        const dStr = formatShortBR(d);
+        labels.push(`${dayNames[i]} (${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')})`);
+
+        let dayInc = 0;
+        let dayExp = 0;
+        transactions.forEach(t => {
+          if (t.date === dStr) {
+            if (t.type === 'income') dayInc += Number(t.amount);
+            if (t.type === 'expense') dayExp += Number(t.amount);
+          }
+        });
+        incomeData.push(dayInc);
+        expenseData.push(dayExp);
+      }
+    } 
+    else if (periodMode === 'annual') {
+      if (titleEl) titleEl.textContent = `Meses do Ano de ${year}`;
+      const monthNamesShort = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
+      for (let m = 0; m < 12; m++) {
+        labels.push(monthNamesShort[m]);
+        const mStr = String(m + 1).padStart(2, '0');
+        const prefix = `${year}-${mStr}`;
+
+        let mInc = 0;
+        let mExp = 0;
+        transactions.forEach(t => {
+          if (t.date && t.date.startsWith(prefix)) {
+            if (t.type === 'income') mInc += Number(t.amount);
+            if (t.type === 'expense') mExp += Number(t.amount);
+          }
+        });
+        incomeData.push(mInc);
+        expenseData.push(mExp);
+      }
+    } 
+    else {
+      // Monthly (Default): Last 6 Months
+      if (titleEl) titleEl.textContent = 'Histórico dos Últimos 6 Meses';
+      const monthNamesShort = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
+      for (let i = 5; i >= 0; i--) {
+        let targetMonth = month - i;
+        let targetYear = year;
+        if (targetMonth < 0) {
+          targetMonth += 12;
+          targetYear -= 1;
+        }
+        labels.push(`${monthNamesShort[targetMonth]}/${String(targetYear).slice(2)}`);
+
+        const mStr = String(targetMonth + 1).padStart(2, '0');
+        const prefix = `${targetYear}-${mStr}`;
+
+        let mInc = 0;
+        let mExp = 0;
+        transactions.forEach(t => {
+          if (t.date && t.date.startsWith(prefix)) {
+            if (t.type === 'income') mInc += Number(t.amount);
+            if (t.type === 'expense') mExp += Number(t.amount);
+          }
+        });
+        incomeData.push(mInc);
+        expenseData.push(mExp);
+      }
     }
 
-    // Accumulate transactions
-    transactions.forEach(t => {
-      const d = new Date(t.date + 'T00:00:00');
-      const y = d.getFullYear();
-      const m = d.getMonth();
-
-      const slot = monthSlots.find(s => s.year === y && s.month === m);
-      if (slot) {
-        if (t.type === 'income') {
-          slot.income += Number(t.amount);
-        } else if (t.type === 'expense') {
-          slot.expense += Number(t.amount);
-        }
-      }
-    });
-
-    const labels = monthSlots.map(s => s.label);
-    const incomeData = monthSlots.map(s => s.income);
-    const expenseData = monthSlots.map(s => s.expense);
+    const isLight = document.body.classList.contains('light-theme');
 
     const chartConfig = {
       type: 'bar',
@@ -218,14 +292,15 @@ const ChartsManager = {
           legend: {
             position: 'top',
             labels: {
-              color: '#94a3b8',
+              color: isLight ? '#475569' : '#94a3b8',
               font: {
                 family: 'Plus Jakarta Sans',
                 size: 11,
                 weight: '600'
               },
               boxWidth: 12,
-              usePointStyle: true
+              usePointStyle: true,
+              pointStyle: 'circle'
             }
           },
           tooltip: {
@@ -249,7 +324,7 @@ const ChartsManager = {
               display: false
             },
             ticks: {
-              color: '#64748b',
+              color: isLight ? '#64748b' : '#64748b',
               font: {
                 family: 'Plus Jakarta Sans',
                 size: 10,
@@ -259,19 +334,19 @@ const ChartsManager = {
           },
           y: {
             grid: {
-              color: 'rgba(255, 255, 255, 0.05)'
+              color: isLight ? '#e2e8f0' : 'rgba(255, 255, 255, 0.05)'
             },
             ticks: {
-              color: '#64748b',
+              color: isLight ? '#64748b' : '#64748b',
               font: {
                 family: 'Plus Jakarta Sans',
                 size: 10
               },
               callback: function(value) {
                 if (value >= 1000) {
-                  return 'R$ ' + (value / 1000).toFixed(0) + 'k';
+                  return 'R$' + (value / 1000).toFixed(0) + 'k';
                 }
-                return 'R$ ' + value;
+                return 'R$' + value;
               }
             }
           }

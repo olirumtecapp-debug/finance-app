@@ -2248,5 +2248,128 @@ body.light-theme .app-update-banner {
   background: var(--bg-subtle);
 }
 
+/* =========================================================
+   Direct Date Picker in Header
+   ========================================================= */
+
+.month-label-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  transition: all var(--transition-fast);
+}
+
+.month-label-container:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--primary-light);
+}
+
+body.light-theme .month-label-container {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+body.light-theme .month-label-container:hover {
+  background: rgba(0, 0, 0, 0.08);
+  border-color: var(--primary);
+}
+
+.date-picker-icon {
+  font-size: 12px;
+  color: var(--primary-light);
+}
+
+.hidden-date-picker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* =========================================================
+   Dynamic Report Header Banner (Tab 4: Estatísticas)
+   ========================================================= */
+
+.report-header-banner {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+body.light-theme .report-header-banner {
+  background: linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%);
+}
+
+.report-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.report-badge {
+  align-self: flex-start;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  background: rgba(59, 130, 246, 0.2);
+  color: var(--primary-light);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.report-main-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.report-quick-totals {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  background: var(--bg-card);
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.report-total-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.report-total-item span {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.report-total-item strong {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.report-total-item.income strong { color: var(--income); }
+.report-total-item.expense strong { color: var(--expense); }
+
+
 
 

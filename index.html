@@ -127,7 +127,11 @@
         <button id="prev-month-btn" class="month-nav-btn" aria-label="Período anterior">
           <i class="fa-solid fa-chevron-left"></i>
         </button>
-        <span id="current-month-display" class="current-month-label">Carregando...</span>
+        <div class="month-label-container" id="open-date-picker-btn" title="Clique para escolher uma data específica">
+          <span id="current-month-display" class="current-month-label">Carregando...</span>
+          <i class="fa-solid fa-calendar-days date-picker-icon"></i>
+          <input type="date" id="direct-date-picker" class="hidden-date-picker" aria-label="Escolher data diretamente">
+        </div>
         <button id="next-month-btn" class="month-nav-btn" aria-label="Próximo período">
           <i class="fa-solid fa-chevron-right"></i>
         </button>
@@ -274,29 +278,48 @@
         </div>
       </section>
 
-      <!-- TAB 4: ESTATÍSTICAS E GRÁFICOS -->
+      <!-- TAB 4: ESTATÍSTICAS E RELATÓRIOS -->
       <section id="tab-stats" class="tab-view">
+        
+        <!-- Report Header Dynamic Banner -->
+        <div class="report-header-banner">
+          <div class="report-header-text">
+            <span class="report-badge" id="report-type-badge">Relatório Mensal</span>
+            <h2 class="report-main-title" id="report-period-title">Agosto de 2026</h2>
+          </div>
+          <div class="report-quick-totals">
+            <div class="report-total-item income">
+              <span>Entradas</span>
+              <strong id="report-total-income" class="sensitive-value">+R$ 0,00</strong>
+            </div>
+            <div class="report-total-item expense">
+              <span>Saídas</span>
+              <strong id="report-total-expense" class="sensitive-value">-R$ 0,00</strong>
+            </div>
+          </div>
+        </div>
+
         <!-- Insights Highlights -->
         <div class="insights-grid">
           <div class="insight-card">
-            <span class="insight-label">Média de Gasto Diário</span>
+            <span class="insight-label" id="stat-card1-title">Média Diária</span>
             <strong id="stat-daily-avg" class="insight-value sensitive-value">R$ 0,00</strong>
-            <span class="insight-sub" id="stat-days-counted">neste mês</span>
+            <span class="insight-sub" id="stat-days-counted">no período</span>
           </div>
           <div class="insight-card">
-            <span class="insight-label">Maior Gasto do Mês</span>
+            <span class="insight-label" id="stat-card2-title">Maior Despesa</span>
             <strong id="stat-top-expense-category" class="insight-value highlight-red">-</strong>
             <span class="insight-sub" id="stat-top-expense-val" class="sensitive-value">R$ 0,00</span>
           </div>
           <div class="insight-card">
-            <span class="insight-label">Balanço Líquido</span>
+            <span class="insight-label">Saldo do Período</span>
             <strong id="stat-net-savings" class="insight-value sensitive-value">R$ 0,00</strong>
             <span class="insight-sub" id="stat-savings-percentage">0% da receita</span>
           </div>
           <div class="insight-card">
-            <span class="insight-label">Comparativo Mês Anterior</span>
-            <strong id="stat-vs-last-month" class="insight-value">0%</strong>
-            <span class="insight-sub" id="stat-vs-last-month-sub">em despesas</span>
+            <span class="insight-label">Lançamentos</span>
+            <strong id="stat-vs-last-month" class="insight-value">0</strong>
+            <span class="insight-sub" id="stat-vs-last-month-sub">no período</span>
           </div>
         </div>
 
@@ -305,7 +328,7 @@
           <div class="section-header">
             <div class="section-title-group">
               <span class="section-icon">🥧</span>
-              <h2 class="section-title">Despesas por Categoria</h2>
+              <h2 class="section-title" id="category-chart-title">Despesas por Categoria</h2>
             </div>
           </div>
           <div class="chart-wrapper">
@@ -316,18 +339,33 @@
           </div>
         </div>
 
-        <!-- Chart 2: 6 Months History Bar Chart -->
+        <!-- Chart 2: Adaptive History / Comparison Bar Chart -->
         <div class="section-card chart-card">
           <div class="section-header">
             <div class="section-title-group">
               <span class="section-icon">📊</span>
-              <h2 class="section-title">Histórico (Últimos 6 Meses)</h2>
+              <h2 class="section-title" id="history-bar-title">Comparativo de Lançamentos</h2>
             </div>
           </div>
           <div class="chart-wrapper bar-chart-wrapper">
             <canvas id="history-bar-chart"></canvas>
           </div>
         </div>
+
+        <!-- Report Transactions Breakdown List -->
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title-group">
+              <span class="section-icon">📋</span>
+              <h2 class="section-title" id="report-tx-title">Lançamentos deste Relatório</h2>
+            </div>
+            <span id="report-tx-count-badge" class="badge">0 itens</span>
+          </div>
+          <div id="report-transactions-list" class="transactions-list">
+            <!-- Injected by JS -->
+          </div>
+        </div>
+
       </section>
 
     </main>
