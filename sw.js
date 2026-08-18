@@ -1,4 +1,7 @@
-const CACHE_NAME = 'finsmart-cache-v1';
+// FinSmart Service Worker - Intelligent Versioning & Cache Engine
+const APP_VERSION = '2.1.0';
+const CACHE_NAME = `finsmart-cache-v${APP_VERSION}`;
+
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -11,21 +14,30 @@ const ASSETS_TO_CACHE = [
   'https://cdn.jsdelivr.net/npm/chart.js'
 ];
 
+// Install Event
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS_TO_CACHE);
     })
   );
-  self.skipWaiting();
 });
 
+// Message Listener for On-Demand Skip Waiting (Update Trigger)
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
+// Activate Event: Purge old version caches smoothly
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
           if (key !== CACHE_NAME) {
+            console.log('[ServiceWorker] Purging old cache:', key);
             return caches.delete(key);
           }
         })
@@ -35,10 +47,16 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// Fetch Event: Network-first for HTML/JS when online, fallback to cache
 self.addEventListener('fetch', (event) => {
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
+    caches.match(event.request).then((cachedResponse) => {
+      return (
+        cachedResponse ||
+        fetch(event.request).then((networkResponse) => {
+          return networkResponse;
+        })
+      );
     })
   );
 });

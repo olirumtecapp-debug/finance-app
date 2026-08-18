@@ -1930,6 +1930,10 @@ body.hide-values .sensitive-value {
   animation: fadeIn 0.25s ease;
 }
 
+.lock-screen-overlay.hidden {
+  display: none !important;
+}
+
 body.light-theme .lock-screen-overlay {
   background: rgba(248, 250, 252, 0.96);
 }
@@ -2048,17 +2052,30 @@ body.light-theme .lock-screen-overlay {
   transform: scale(0.92);
 }
 
-.keypad-btn.action-key {
-  font-size: 18px;
-  color: var(--primary-light);
-  background: transparent;
-  border-color: transparent;
-  box-shadow: none;
-}
-
 .keypad-btn.action-key:active {
   background: var(--bg-subtle);
   transform: scale(0.95);
+}
+
+.lock-bypass-btn {
+  margin-top: 20px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: var(--radius-full);
+  transition: all var(--transition-fast);
+}
+
+.lock-bypass-btn:hover {
+  color: var(--primary-light);
+  background: var(--bg-subtle);
 }
 
 /* Toggle Switch (iOS / Material style) */
@@ -2118,5 +2135,118 @@ input:checked + .slider {
 input:checked + .slider:before {
   transform: translateX(20px);
 }
+
+/* =========================================================
+   App Update Notification Banner
+   ========================================================= */
+
+.app-update-banner {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6), 0 0 20px var(--primary-glow);
+  z-index: 800;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: slideDownBanner 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body.light-theme .app-update-banner {
+  background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+  border: 1px solid rgba(37, 99, 235, 0.3);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15), 0 0 20px rgba(37, 99, 235, 0.15);
+}
+
+.app-update-banner.hidden {
+  display: none;
+}
+
+@keyframes slideDownBanner {
+  from { opacity: 0; transform: translateY(-30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.update-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.update-banner-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: var(--primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px var(--primary-glow);
+}
+
+.update-banner-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.update-banner-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.update-banner-desc {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
+.update-banner-actions {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 8px;
+}
+
+.btn-update-now {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 8px var(--primary-glow);
+  transition: all var(--transition-fast);
+}
+
+.btn-update-now:active {
+  transform: scale(0.96);
+}
+
+.btn-update-later {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-update-later:active {
+  background: var(--bg-subtle);
+}
+
 
 

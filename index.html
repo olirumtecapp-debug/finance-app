@@ -33,6 +33,23 @@
   <!-- App Container (Mobile viewport frame for desktop / Fullscreen on smartphone) -->
   <div id="app-container" class="app-container">
     
+    <!-- App Update Notification Banner -->
+    <div id="app-update-banner" class="app-update-banner hidden">
+      <div class="update-banner-content">
+        <div class="update-banner-icon">
+          <i class="fa-solid fa-rocket"></i>
+        </div>
+        <div class="update-banner-text">
+          <strong class="update-banner-title">Nova Atualização Disponível!</strong>
+          <span class="update-banner-desc">Atualize agora para ver os novos recursos. Seus registros continuarão 100% salvos.</span>
+        </div>
+      </div>
+      <div class="update-banner-actions">
+        <button type="button" class="btn-update-now" id="btn-update-now">Atualizar Agora</button>
+        <button type="button" class="btn-update-later" id="btn-update-later">Lembrar Depois</button>
+      </div>
+    </div>
+
     <!-- Lock Screen Security Overlay -->
     <div id="lock-screen-overlay" class="lock-screen-overlay hidden">
       <div class="lock-card">
@@ -72,6 +89,10 @@
             <i class="fa-solid fa-delete-left"></i>
           </button>
         </div>
+
+        <button type="button" id="lock-forgot-pin-btn" class="lock-bypass-btn">
+          <i class="fa-solid fa-unlock"></i> Entrar sem senha / Configurar depois
+        </button>
       </div>
     </div>
 
@@ -741,13 +762,5 @@
   <!-- Application Logic Scripts -->
   <script src="charts.js"></script>
   <script src="app.js"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .catch(err => console.log('SW registration error:', err));
-      });
-    }
-  </script>
 </body>
 </html>

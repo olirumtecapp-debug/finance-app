@@ -84,6 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initAppState();
   bindEvents();
   checkSecurityOnStartup();
+  initServiceWorkerUpdates();
 });
 
 function initAppState() {
@@ -229,7 +230,7 @@ function saveData() {
 function checkSecurityOnStartup() {
   const lockOverlay = document.getElementById('lock-screen-overlay');
   
-  if (AppState.securityEnabled && AppState.pinCode) {
+  if (AppState.securityEnabled === true && AppState.pinCode && AppState.pinCode.length === 4) {
     AppState.isUnlocked = false;
     AppState.enteredPin = '';
     updatePinDots();
@@ -243,6 +244,7 @@ function checkSecurityOnStartup() {
     }
   } else {
     AppState.isUnlocked = true;
+    AppState.securityEnabled = false;
     if (lockOverlay) lockOverlay.classList.add('hidden');
     renderAll();
   }
@@ -487,6 +489,15 @@ function bindEvents() {
   });
   document.getElementById('keypad-backspace-btn')?.addEventListener('click', handleKeypadBackspace);
   document.getElementById('keypad-bio-btn')?.addEventListener('click', () => triggerBiometricAuth(false));
+  document.getElementById('lock-forgot-pin-btn')?.addEventListener('click', () => {
+    AppState.isUnlocked = true;
+    AppState.securityEnabled = false;
+    saveData();
+    const lockOverlay = document.getElementById('lock-screen-overlay');
+    if (lockOverlay) lockOverlay.classList.add('hidden');
+    renderAll();
+    showToast('Acesso liberado! Configure seu PIN em Configurações ⚙️');
+  });
 
   // Security Settings Handlers
   document.getElementById('security-lock-toggle')?.addEventListener('change', (e) => {
@@ -1716,3 +1727,74 @@ function showToast(message, iconClass = 'fa-circle-check') {
     toast.classList.add('hidden');
   }, 2800);
 }
+
+/* =========================================================
+   10. Intelligent App Update & Version Engine (PWA)
+   ========================================================= */
+
+let newWorkerWaiting = null;
+
+function initServiceWorkerUpdates() {
+  if (!('serviceWorker' in navigator)) return;
+
+  navigator.serviceWorker.register('./sw.js').then((registration) => {
+    // Check if an update is already waiting
+    if (registration.waiting) {
+      newWorkerWaiting = registration.waiting;
+      promptUpdateBanner();
+    }
+
+    // Detect if a new update is installing
+    registration.addEventListener('updatefound', () => {
+      const installingWorker = registration.installing;
+      if (installingWorker) {
+        installingWorker.addEventListener('statechange', () => {
+          if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            newWorkerWaiting = installingWorker;
+            promptUpdateBanner();
+          }
+        });
+      }
+    });
+  }).catch((err) => {
+    console.log('[SW] Registration failed:', err);
+  });
+
+  // Reload page smoothly when new service worker takes control
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!refreshing) {
+      refreshing = true;
+      window.location.reload();
+    }
+  });
+
+  // Wire Update Action Buttons
+  document.getElementById('btn-update-now')?.addEventListener('click', applyAppUpdateNow);
+  document.getElementById('btn-update-later')?.addEventListener('click', dismissAppUpdate);
+}
+
+function promptUpdateBanner() {
+  const isDismissed = sessionStorage.getItem('finsmart_update_dismissed');
+  if (isDismissed === 'true') return;
+
+  const banner = document.getElementById('app-update-banner');
+  if (banner) banner.classList.remove('hidden');
+}
+
+function applyAppUpdateNow() {
+  showToast('Aplicando atualização...', 'fa-rotate');
+  if (newWorkerWaiting) {
+    newWorkerWaiting.postMessage({ type: 'SKIP_WAITING' });
+  } else {
+    window.location.reload();
+  }
+}
+
+function dismissAppUpdate() {
+  const banner = document.getElementById('app-update-banner');
+  if (banner) banner.classList.add('hidden');
+  sessionStorage.setItem('finsmart_update_dismissed', 'true');
+  showToast('Atualização adiada. Lembraremos no próximo acesso.');
+}
+
